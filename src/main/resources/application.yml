@@ -1,0 +1,26 @@
+server:
+  port: 10001
+# SpringDoc OpenAPI 配置
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+
+spring:
+  application:
+    name: spring-ai-alibaba-deepseek-chat-model-example
+
+  ai:
+    openai:
+      # 请在此处配置您的DeepSeek API密钥
+      # 您可以从 https://platform.deepseek.com/ 获取API密钥
+      api-key: ${DEEPSEEK_API_KEY:sk-e8e9ca6f29f845838cc10e5b289dd865}
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model: deepseek-chat
+      embedding:
+        enabled: false

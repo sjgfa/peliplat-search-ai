@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PeliPlat AI - Movie Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #8a2be2;
+            --secondary-color: #ff4f8b;
+            --bg-color: #0f1224;
+            --card-bg: rgba(255, 255, 255, 0.1);
+            --text-color: #fff;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            --transition: all 0.4s cubic-bezier(0.215, 0.610, 0.355, 1);
+            --border-radius: 16px;
+            --card-blur: blur(10px);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: linear-gradient(-45deg, #121212, #1a1a2e, #16213e, #0f172a);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            border-radius: 3px;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 20px rgba(138, 43, 226, 0.3);
+            letter-spacing: 2px;
+            font-weight: 700;
+            animation: fadeIn 1s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .subtitle {
+            font-size: 1.3rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 20px;
+            animation: fadeIn 1.2s ease;
+        }
+
+        .search-suggestions {
+            margin-bottom: 30px;
+            text-align: center;
+            animation: slideIn 1.8s ease;
+        }
+
+        .search-suggestions h3 {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+        }
+
+        .suggestion-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .suggestion-tag {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: var(--card-blur);
+            padding: 10px 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.9rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .suggestion-tag:hover {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(138, 43, 226, 0.3);
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: var(--card-blur);
+            -webkit-backdrop-filter: var(--card-blur);
+            border-radius: 50px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: var(--transition);
+            animation: slideIn 1.5s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .search-box:focus-within {
+            box-shadow: 0 15px 30px rgba(138, 43, 226, 0.3);
+            transform: translateY(-5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        #search-input {
+            flex: 1;
+            border: none;
+            padding: 20px 25px;
+            font-size: 1.1rem;
+            outline: none;
+            background: transparent;
+            color: white;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        #search-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        #search-button {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            padding: 18px 35px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        #search-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: var(--transition);
+            z-index: -1;
+        }
+
+        #search-button:hover::before {
+            width: 100%;
+        }
+
+        #search-button i {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+
+        .search-history {
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .search-history h4 {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+        }
+
+        .search-history h4 i {
+            margin-right: 8px;
+            color: var(--secondary-color);
+        }
+
+        .history-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .history-tag {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .history-tag:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid var(--secondary-color);
+            border-left: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1.2s linear infinite;
+            margin: 0 auto;
+            box-shadow: 0 0 20px rgba(138, 43, 226, 0.3);
+        }
+
+        .loading p {
+            margin-top: 15px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+            perspective: 1000px;
+        }
+
+        .movie-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: var(--card-blur);
+            -webkit-backdrop-filter: var(--card-blur);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            animation: cardFadeIn 0.8s ease;
+        }
+
+        @keyframes cardFadeIn {
+            from { opacity: 0; transform: translateY(30px) rotateX(10deg); }
+            to { opacity: 1; transform: translateY(0) rotateX(0); }
+        }
+
+        .movie-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .movie-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, 
+                       rgba(138, 43, 226, 0.15) 0%, 
+                       rgba(255, 79, 139, 0.15) 100%);
+            opacity: 0;
+            transition: var(--transition);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .movie-card:hover::before {
+            opacity: 1;
+        }
+
+        .movie-poster {
+            width: 100%;
+            height: 380px;
+            object-fit: cover;
+            transition: var(--transition);
+        }
+
+        .movie-card:hover .movie-poster {
+            transform: scale(1.05);
+        }
+
+        .movie-info {
+            padding: 25px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 2;
+        }
+
+        .movie-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--text-color);
+            line-height: 1.3;
+            background: linear-gradient(to right, #ffffff, #e6e6e6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .movie-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .year {
+            display: flex;
+            align-items: center;
+        }
+
+        .year i {
+            margin-right: 8px;
+            color: var(--secondary-color);
+        }
+
+        .rating {
+            display: flex;
+            align-items: center;
+        }
+
+        .rating i {
+            color: #ffcc00;
+            margin-right: 8px;
+            animation: starPulse 3s infinite;
+        }
+
+        @keyframes starPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .genres {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            padding: 6px 15px;
+            border-radius: 25px;
+            font-size: 0.85rem;
+            display: inline-block;
+            margin-bottom: 15px;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(138, 43, 226, 0.3);
+        }
+
+        .movie-description {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 20px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            flex: 1;
+            line-height: 1.6;
+        }
+
+        .movie-languages {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+        }
+
+        .movie-languages i {
+            margin-right: 8px;
+            color: var(--secondary-color);
+        }
+
+        .movie-type {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 7px 15px;
+            border-radius: 25px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            z-index: 10;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .no-results {
+            text-align: center;
+            grid-column: 1 / -1;
+            padding: 60px 40px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: var(--card-blur);
+            -webkit-backdrop-filter: var(--card-blur);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: fadeIn 0.8s ease;
+        }
+
+        .no-results i {
+            font-size: 4rem;
+            color: rgba(255, 255, 255, 0.3);
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .no-results h3 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            color: var(--text-color);
+        }
+
+        .no-results p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.1rem;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: var(--card-blur);
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .results-stats {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+        }
+
+        .sort-options {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sort-options label {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+        }
+
+        .sort-options select {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .sort-options select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(138, 43, 226, 0.3);
+        }
+
+        .sort-options select option {
+            background: var(--bg-color);
+            color: white;
+        }
+
+        .loading-steps {
+            margin-top: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            opacity: 0.4;
+            transition: var(--transition);
+            padding: 8px 15px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .step.active {
+            opacity: 1;
+            background: rgba(138, 43, 226, 0.2);
+            box-shadow: 0 0 15px rgba(138, 43, 226, 0.3);
+        }
+
+        .step i {
+            margin-right: 12px;
+            font-size: 1.1rem;
+            color: var(--secondary-color);
+        }
+
+        .step span {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .search-box {
+                flex-direction: column;
+                border-radius: var(--border-radius);
+            }
+            
+            #search-input {
+                width: 100%;
+                border-radius: var(--border-radius) var(--border-radius) 0 0;
+                padding: 15px 20px;
+            }
+            
+            #search-button {
+                width: 100%;
+                border-radius: 0 0 var(--border-radius) var(--border-radius);
+                padding: 15px 20px;
+            }
+            
+            .results {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .subtitle {
+                font-size: 1.1rem;
+            }
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 70px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+            position: relative;
+        }
+
+        footer::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            border-radius: 3px;
+        }
+
+        .search-suggestions-results {
+            margin-top: 40px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: var(--card-blur);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: fadeIn 0.8s ease;
+        }
+
+        .search-suggestions-results h4 {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 500;
+        }
+
+        .search-suggestions-results h4 i {
+            margin-right: 8px;
+            color: #ffcc00;
+        }
+
+        .search-suggestions-results .suggestion-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .search-suggestions-results .suggestion-tag {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: var(--card-blur);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .search-suggestions-results .suggestion-tag:hover {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(138, 43, 226, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PeliPlat AI</h1>
+            <p class="subtitle">Chat to search movies</p>
+        </header>
+
+        <!-- 添加搜索建议标签 -->
+        <div class="search-suggestions">
+            <h3>Try these suggestions:</h3>
+            <div class="suggestion-tags">
+                <span class="suggestion-tag" data-query="sci-fi movies 2024">🚀 Sci-Fi 2024</span>
+                <span class="suggestion-tag" data-query="romantic comedies">💕 Rom-Com</span>
+                <span class="suggestion-tag" data-query="marvel superhero movies">🦸 Marvel Heroes</span>
+                <span class="suggestion-tag" data-query="horror movies">👻 Horror</span>
+                <span class="suggestion-tag" data-query="classic movies">🎭 Classic</span>
+                <span class="suggestion-tag" data-query="animated films">🎨 Animation</span>
+                <span class="suggestion-tag" data-query="action movies with car chases">🏎️ Action</span>
+                <span class="suggestion-tag" data-query="Oscar winning movies">🏆 Oscar Winners</span>
+            </div>
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="Enter what you want to watch, e.g.: sci-fi movies, action movies from 2022, classic romance films..." autofocus>
+            <button id="search-button"><i class="fas fa-search"></i> Search</button>
+        </div>
+
+        <!-- 添加搜索历史 -->
+        <div class="search-history" style="display: none;">
+            <h4><i class="fas fa-history"></i> Recent Searches</h4>
+            <div class="history-items"></div>
+        </div>
+
+        <div class="loading">
+            <div class="loader"></div>
+            <p id="loading-text">Finding the perfect movies for you...</p>
+            <div class="loading-steps">
+                <div class="step active">
+                    <i class="fas fa-brain"></i>
+                    <span>AI is understanding your request...</span>
+                </div>
+                <div class="step">
+                    <i class="fas fa-search"></i>
+                    <span>Searching movie database...</span>
+                </div>
+                <div class="step">
+                    <i class="fas fa-star"></i>
+                    <span>Curating best matches...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 添加结果统计和排序 -->
+        <div class="results-header" style="display: none;">
+            <div class="results-stats">
+                <span id="results-count">0 movies found</span>
+            </div>
+            <div class="sort-options">
+                <label>Sort by:</label>
+                <select id="sort-select">
+                    <option value="relevance">Relevance</option>
+                    <option value="rating">Rating</option>
+                    <option value="year">Year</option>
+                    <option value="title">Title</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="results"></div>
+
+        <footer>
+            <p>PeliPlat AI &copy; 2025 - AI-powered movie recommendations</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('search-input');
+            const searchButton = document.getElementById('search-button');
+            const resultsContainer = document.querySelector('.results');
+            const loadingIndicator = document.querySelector('.loading');
+            const resultsHeader = document.querySelector('.results-header');
+            const resultsCount = document.getElementById('results-count');
+            const sortSelect = document.getElementById('sort-select');
+            const searchHistory = document.querySelector('.search-history');
+            const historyItems = document.querySelector('.history-items');
+            const searchSuggestions = document.querySelector('.search-suggestions');
+
+            let currentMovies = [];
+            let searchHistoryData = JSON.parse(localStorage.getItem('movieSearchHistory')) || [];
+
+            // 初始化
+            updateSearchHistory();
+            addSuggestionClickHandlers();
+
+            // 搜索建议点击处理
+            function addSuggestionClickHandlers() {
+                document.querySelectorAll('.suggestion-tag').forEach(tag => {
+                    tag.addEventListener('click', function() {
+                        const query = this.getAttribute('data-query');
+                        searchInput.value = query;
+                        performSearch();
+                        // 隐藏建议，显示搜索历史
+                        searchSuggestions.style.display = 'none';
+                        updateSearchHistory();
+                    });
+                });
+            }
+
+            // 更新搜索历史
+            function updateSearchHistory() {
+                if (searchHistoryData.length > 0) {
+                    searchHistory.style.display = 'block';
+                    historyItems.innerHTML = '';
+                    
+                    // 只显示最近5条搜索记录
+                    const recentHistory = searchHistoryData.slice(-5).reverse();
+                    recentHistory.forEach(query => {
+                        const historyTag = document.createElement('span');
+                        historyTag.className = 'history-tag';
+                        historyTag.textContent = query;
+                        historyTag.addEventListener('click', function() {
+                            searchInput.value = query;
+                            performSearch();
+                        });
+                        historyItems.appendChild(historyTag);
+                    });
+                }
+            }
+
+            // 添加到搜索历史
+            function addToSearchHistory(query) {
+                if (query && !searchHistoryData.includes(query)) {
+                    searchHistoryData.push(query);
+                    // 限制历史记录数量
+                    if (searchHistoryData.length > 10) {
+                        searchHistoryData.shift();
+                    }
+                    localStorage.setItem('movieSearchHistory', JSON.stringify(searchHistoryData));
+                    updateSearchHistory();
+                }
+            }
+
+            // 加载步骤动画
+            function animateLoadingSteps() {
+                const steps = document.querySelectorAll('.step');
+                steps.forEach(step => step.classList.remove('active'));
+                
+                let currentStep = 0;
+                const stepInterval = setInterval(() => {
+                    if (currentStep < steps.length) {
+                        steps[currentStep].classList.add('active');
+                        currentStep++;
+                    } else {
+                        clearInterval(stepInterval);
+                    }
+                }, 1500);
+                
+                return stepInterval;
+            }
+
+            // 监听搜索按钮点击事件
+            searchButton.addEventListener('click', function() {
+                performSearch();
+            });
+
+            // 监听回车键
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+
+            // 排序功能
+            sortSelect.addEventListener('change', function() {
+                if (currentMovies.length > 0) {
+                    sortMovies(this.value);
+                    displayResults(currentMovies);
+                }
+            });
+
+            // 排序电影
+            function sortMovies(sortBy) {
+                switch(sortBy) {
+                    case 'rating':
+                        currentMovies.sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0));
+                        break;
+                    case 'year':
+                        currentMovies.sort((a, b) => (b.publicationYear || 0) - (a.publicationYear || 0));
+                        break;
+                    case 'title':
+                        currentMovies.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+                        break;
+                    default: // relevance
+                        // 保持原始顺序
+                        break;
+                }
+            }
+
+            // 执行搜索
+            function performSearch() {
+                const query = searchInput.value.trim();
+                
+                if (query.length === 0) {
+                    return;
+                }
+                
+                // 隐藏建议和历史
+                searchSuggestions.style.display = 'none';
+                searchHistory.style.display = 'none';
+                
+                // 显示加载指示器
+                loadingIndicator.style.display = 'block';
+                resultsContainer.innerHTML = '';
+                resultsHeader.style.display = 'none';
+                
+                // 开始加载步骤动画
+                const stepInterval = animateLoadingSteps();
+                
+                // 发起API请求
+                fetch(`/api/movie-tool/chat?userMessage=${encodeURIComponent(query)}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    clearInterval(stepInterval);
+                    
+                    // 隐藏加载指示器
+                    loadingIndicator.style.display = 'none';
+                    
+                    // 检查响应是否成功
+                    if (data.success) {
+                        // 保存搜索结果
+                        currentMovies = data.movies || [];
+                        
+                        // 添加到搜索历史
+                        addToSearchHistory(query);
+                        
+                        // 显示结果
+                        displayResults(currentMovies);
+                        
+                        // 显示结果头部和统计信息
+                        if (currentMovies.length > 0) {
+                            resultsHeader.style.display = 'flex';
+                            resultsCount.textContent = `${currentMovies.length} movie${currentMovies.length > 1 ? 's' : ''} found`;
+                            
+                            // 显示搜索统计
+                            if (data.metadata) {
+                                const avgRating = data.metadata.averageRating;
+                                const genreCount = data.metadata.genreCount;
+                                if (avgRating > 0) {
+                                    resultsCount.textContent += ` | Avg Rating: ${avgRating}`;
+                                }
+                                if (genreCount > 0) {
+                                    resultsCount.textContent += ` | ${genreCount} Genre${genreCount > 1 ? 's' : ''}`;
+                                }
+                            }
+                        }
+                        
+                        // 显示搜索建议
+                        displaySearchSuggestions(data.suggestions || []);
+                        
+                    } else {
+                        // 处理API错误
+                        currentMovies = [];
+                        resultsContainer.innerHTML = `
+                            <div class="no-results">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <h3>Search failed</h3>
+                                <p>${data.error || 'Unknown error occurred'}</p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    clearInterval(stepInterval);
+                    console.error('Error:', error);
+                    loadingIndicator.style.display = 'none';
+                    resultsContainer.innerHTML = `
+                        <div class="no-results">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <h3>Oops, something went wrong!</h3>
+                            <p>Please try again later or try different search terms.</p>
+                        </div>
+                    `;
+                });
+            }
+
+            // 显示搜索建议
+            function displaySearchSuggestions(suggestions) {
+                if (suggestions.length > 0) {
+                    // 在结果后面添加建议
+                    const suggestionsHtml = `
+                        <div class="search-suggestions-results">
+                            <h4><i class="fas fa-lightbulb"></i> You might also like:</h4>
+                            <div class="suggestion-tags">
+                                ${suggestions.map(suggestion => 
+                                    `<span class="suggestion-tag" data-query="${suggestion}">${suggestion}</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    `;
+                    
+                    resultsContainer.insertAdjacentHTML('afterend', suggestionsHtml);
+                    
+                    // 为新建议添加点击事件
+                    document.querySelectorAll('.search-suggestions-results .suggestion-tag').forEach(tag => {
+                        tag.addEventListener('click', function() {
+                            const query = this.getAttribute('data-query');
+                            searchInput.value = query;
+                            performSearch();
+                        });
+                    });
+                }
+            }
+
+            // 显示结果
+            function displayResults(movies) {
+                // 清空结果容器
+                resultsContainer.innerHTML = '';
+                
+                if (!movies || movies.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div class="no-results">
+                            <i class="fas fa-film"></i>
+                            <h3>No movies found</h3>
+                            <p>Try different search terms or check our recommendations.</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // 添加每个电影卡片
+                movies.forEach((movie, index) => {
+                    const movieElement = createMovieCard(movie, index);
+                    resultsContainer.appendChild(movieElement);
+                });
+            }
+
+            // 创建电影卡片
+            function createMovieCard(movie, index) {
+                const card = document.createElement('div');
+                card.className = 'movie-card';
+                card.style.animationDelay = `${index * 0.1}s`;
+                
+                // Set movie click event to redirect to detail page
+                card.addEventListener('click', function() {
+                    // Create URL-friendly title
+                    const titleSlug = movie.title.toLowerCase()
+                        .replace(/[^\w\s-]/g, '') // Remove special characters
+                        .replace(/\s+/g, '-');    // Replace spaces with hyphens
+                    
+                    // Redirect to movie detail page
+                    const detailUrl = `https://www.peliplat.com/en/library/movie/${movie.ppId}/${titleSlug}`;
+                    window.open(detailUrl, '_blank');
+                });
+                
+                // 设置电影类型标签
+                const mediaType = movie.mediaType === 3 ? 'Movie' : 'TV Show';
+                
+                // 处理缺失的海报
+                const posterUrl = movie.photoUrl || 'https://via.placeholder.com/300x450?text=No+Poster';
+                
+                // 处理描述截断
+                const description = movie.summary || 'No description available';
+                
+                // 创建卡片内容
+                card.innerHTML = `
+                    <div class="movie-type">${mediaType}</div>
+                    <img src="${posterUrl}" alt="${movie.title}" class="movie-poster">
+                    <div class="movie-info">
+                        <h3 class="movie-title">${movie.title}</h3>
+                        <div class="movie-meta">
+                            <span class="year"><i class="far fa-calendar-alt"></i> ${movie.publicationYear || 'Unknown'}</span>
+                            <span class="rating"><i class="fas fa-star"></i> ${movie.rating || 'N/A'}</span>
+                        </div>
+                        <span class="genres">${movie.genres || 'Uncategorized'}</span>
+                        <p class="movie-description">${description}</p>
+                        <p class="movie-languages"><i class="fas fa-language"></i> ${movie.languageCodes || 'Unknown'}</p>
+                    </div>
+                `;
+                
+                return card;
+            }
+
+            // 搜索输入框焦点处理
+            searchInput.addEventListener('focus', function() {
+                if (this.value.trim() === '') {
+                    searchSuggestions.style.display = 'block';
+                }
+            });
+
+            // 点击页面其他地方隐藏建议
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.search-suggestions') && 
+                    !e.target.closest('#search-input')) {
+                    // searchSuggestions.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html> 
