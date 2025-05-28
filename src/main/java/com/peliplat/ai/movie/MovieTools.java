@@ -33,10 +33,10 @@ public class MovieTools {
      * 搜索电影
      * 根据查询语句搜索电影
      */
-    @Tool(description = "根据影片名称搜索电影,查询多部电影的时候优先调用concurrentSearchMovies", returnDirect = true)
+    @Tool(description = "根据影片名称搜索电影，查询多部电影的时候优先调用concurrentSearchMovies。如果查询包含地区信息（如'中国电影'、'韩国电影'），请相应调整language参数", returnDirect = true)
     public Response searchMovies(
             @ToolParam(description = "要搜索的电影的准确或常用标题。如果用户提供的是描述性内容，请先尝试推断出实际的电影标题") String query,
-            @ToolParam(description = "电影信息显示的语言代码，默认为'en'英语") String language) {
+            @ToolParam(description = "电影信息显示的语言代码：中国电影用'zh'，韩国电影用'ko'，日本电影用'ja'，英语电影用'en'，默认为'en'") String language) {
 
         try {
             if (!StringUtils.hasText(query)) {
@@ -110,11 +110,11 @@ public class MovieTools {
      * 按年份搜索电影
      * 根据年份和类型搜索电影
      */
-    @Tool(description = "按年份和类型搜索电影,当你需要查找特定年份或特定类型的电影时使用此功能", returnDirect = true)
+    @Tool(description = "按年份、类型、地区搜索电影。当你需要查找特定年份、特定类型或特定地区的电影时使用此功能。对于中国/中文电影，请将language设置为'zh'，对于韩国电影设置为'ko'，日本电影设置为'ja'等", returnDirect = true)
     public Response searchMoviesByYear(
-            @ToolParam(description = "电影年份（可选），例如'2024'") String year,
-            @ToolParam(description = "电影类型，查询多种类型的时候用逗号分割（可选），支持的类型有：Action, Adventure, Animation, Comedy, Crime, Documentary, Drama, Family, Fantasy, History, Horror, Music, Mystery, Romance, Thriller, War, Western, Sci-Fi, Biography, Film-Noir, Musical") String genre,
-            @ToolParam(description = "电影信息显示的语言代码，默认为'en'英语") String language) {
+            @ToolParam(description = "电影年份（可选），例如'2024'。可以留空搜索所有年份") String year,
+            @ToolParam(description = "电影类型，查询多种类型的时候用逗号分割（可选），支持的类型有：Action, Adventure, Animation, Comedy, Crime, Documentary, Drama, Family, Fantasy, History, Horror, Music, Mystery, Romance, Thriller, War, Western, Sci-Fi, Biography, Film-Noir, Musical。革命片可以使用History,War组合") String genre,
+            @ToolParam(description = "电影信息显示的语言代码，重要：中国电影用'zh'，韩国电影用'ko'，日本电影用'ja'，英语电影用'en'。这个参数决定了搜索的电影来源地区") String language) {
 
         try {
 
@@ -160,6 +160,35 @@ public class MovieTools {
             }
         } catch (Exception e) {
             logger.error("获取本周热门电影失败", e);
+            return new Response(new ArrayList<>());
+        }
+    }
+
+    /**
+     * 按地区和类型搜索电影
+     * 专门用于搜索特定地区的特定类型电影，如中国历史片、韩国爱情片等
+     */
+    @Tool(description = "按地区和类型搜索电影。当用户询问特定地区的特定类型电影时使用，如'中国历史革命片'、'韩国爱情片'、'日本动画电影'等", returnDirect = true)
+    public Response searchMoviesByRegionAndGenre(
+            @ToolParam(description = "地区/国家，影响搜索的电影来源：中国用'zh'，韩国用'ko'，日本用'ja'，美国/英语地区用'en'等") String region,
+            @ToolParam(description = "电影类型，支持的类型有：Action, Adventure, Animation, Comedy, Crime, Documentary, Drama, Family, Fantasy, History, Horror, Music, Mystery, Romance, Thriller, War, Western, Sci-Fi, Biography, Film-Noir, Musical。革命片可以使用History,War组合") String genre,
+            @ToolParam(description = "电影年份（可选），例如'2024'。可以留空搜索所有年份") String year) {
+
+        try {
+            logger.info("按地区和类型搜索电影请求: 地区={}, 类型={}, 年份={}", region, genre, year);
+
+            String languageCode = region != null ? region : "en";
+            // 使用按年份搜索的方法，但重点是地区和类型
+            MovieListResponseVo responseVo = movieSearchService.searchMoviesByYearAndGenreForVo(year, genre, languageCode);
+
+            if (responseVo.getResult() == null || responseVo.getResult().isEmpty()) {
+                return new Response(new ArrayList<>());
+            } else {
+                // 直接返回电影对象列表
+                return new Response(responseVo.getResult());
+            }
+        } catch (Exception e) {
+            logger.error("按地区和类型搜索电影失败", e);
             return new Response(new ArrayList<>());
         }
     }

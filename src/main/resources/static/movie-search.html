@@ -790,6 +790,8 @@
             let currentMovies = [];
             let searchHistoryData = JSON.parse(localStorage.getItem('movieSearchHistory')) || [];
 
+            console.log('Movie search initialized - currentMovies:', currentMovies);
+
             // 初始化
             updateSearchHistory();
             addSuggestionClickHandlers();
@@ -874,23 +876,48 @@
 
             // 排序功能
             sortSelect.addEventListener('change', function() {
-                if (currentMovies.length > 0) {
-                    sortMovies(this.value);
-                    displayResults(currentMovies);
+                console.log('Sort change triggered, currentMovies:', currentMovies);
+                
+                // 强化类型检查和转换
+                if (currentMovies && typeof currentMovies === 'object') {
+                    let moviesToSort = [];
+                    
+                    // 如果currentMovies是响应对象，提取movies数组
+                    if (currentMovies.movies && Array.isArray(currentMovies.movies)) {
+                        moviesToSort = [...currentMovies.movies]; // 创建副本避免修改原数据
+                    } 
+                    // 如果currentMovies本身就是数组
+                    else if (Array.isArray(currentMovies)) {
+                        moviesToSort = [...currentMovies]; // 创建副本
+                    }
+                    
+                    if (moviesToSort.length > 0) {
+                        sortMovies(this.value, moviesToSort);
+                        displayResults(moviesToSort);
+                    } else {
+                        console.warn('No valid movies array found for sorting');
+                    }
+                } else {
+                    console.warn('currentMovies is not a valid object:', currentMovies);
                 }
             });
 
-            // 排序电影
-            function sortMovies(sortBy) {
+            // 排序电影 - 修改为接受数组参数
+            function sortMovies(sortBy, moviesArray) {
+                if (!Array.isArray(moviesArray)) {
+                    console.warn('sortMovies: moviesArray is not an array:', moviesArray);
+                    return;
+                }
+                
                 switch(sortBy) {
                     case 'rating':
-                        currentMovies.sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0));
+                        moviesArray.sort((a, b) => (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0));
                         break;
                     case 'year':
-                        currentMovies.sort((a, b) => (b.publicationYear || 0) - (a.publicationYear || 0));
+                        moviesArray.sort((a, b) => (b.publicationYear || 0) - (a.publicationYear || 0));
                         break;
                     case 'title':
-                        currentMovies.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+                        moviesArray.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
                         break;
                     default: // relevance
                         // 保持原始顺序
@@ -926,13 +953,21 @@
                 .then(data => {
                     clearInterval(stepInterval);
                     
+                    // 添加调试日志
+                    console.log('API Response:', data);
+                    
                     // 隐藏加载指示器
                     loadingIndicator.style.display = 'none';
                     
                     // 检查响应是否成功
-                    if (data.success) {
-                        // 保存搜索结果
-                        currentMovies = data.movies || [];
+                    if (data && data.success) {
+                        // 保存完整响应数据用于元数据
+                        const fullResponse = data;
+                        
+                        // 保存搜索结果数组
+                        currentMovies = Array.isArray(data.movies) ? data.movies : [];
+                        
+                        console.log('Success response - currentMovies assigned:', currentMovies.length, 'movies');
                         
                         // 添加到搜索历史
                         addToSearchHistory(query);
@@ -946,9 +981,9 @@
                             resultsCount.textContent = `${currentMovies.length} movie${currentMovies.length > 1 ? 's' : ''} found`;
                             
                             // 显示搜索统计
-                            if (data.metadata) {
-                                const avgRating = data.metadata.averageRating;
-                                const genreCount = data.metadata.genreCount;
+                            if (fullResponse.metadata) {
+                                const avgRating = fullResponse.metadata.averageRating;
+                                const genreCount = fullResponse.metadata.genreCount;
                                 if (avgRating > 0) {
                                     resultsCount.textContent += ` | Avg Rating: ${avgRating}`;
                                 }
@@ -959,23 +994,40 @@
                         }
                         
                         // 显示搜索建议
-                        displaySearchSuggestions(data.suggestions || []);
+                        displaySearchSuggestions(fullResponse.suggestions || []);
                         
                     } else {
-                        // 处理API错误
-                        currentMovies = [];
-                        resultsContainer.innerHTML = `
-                            <div class="no-results">
-                                <i class="fas fa-exclamation-circle"></i>
-                                <h3>Search failed</h3>
-                                <p>${data.error || 'Unknown error occurred'}</p>
-                            </div>
-                        `;
+                        // 处理API错误或旧格式响应
+                        if (Array.isArray(data)) {
+                            // 如果data本身就是数组（旧格式）
+                            console.log('Legacy format response - currentMovies assigned:', data.length, 'movies');
+                            currentMovies = data;
+                            addToSearchHistory(query);
+                            displayResults(currentMovies);
+                            
+                            if (currentMovies.length > 0) {
+                                resultsHeader.style.display = 'flex';
+                                resultsCount.textContent = `${currentMovies.length} movie${currentMovies.length > 1 ? 's' : ''} found`;
+                            }
+                        } else {
+                            // 真正的错误情况
+                            console.log('Error response - currentMovies reset to empty array');
+                            currentMovies = [];
+                            resultsContainer.innerHTML = `
+                                <div class="no-results">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    <h3>Search failed</h3>
+                                    <p>${(data && data.error) || 'Unknown error occurred'}</p>
+                                </div>
+                            `;
+                        }
                     }
                 })
                 .catch(error => {
                     clearInterval(stepInterval);
                     console.error('Error:', error);
+                    console.log('Network error - currentMovies reset to empty array');
+                    currentMovies = []; // 重置为空数组
                     loadingIndicator.style.display = 'none';
                     resultsContainer.innerHTML = `
                         <div class="no-results">
@@ -989,7 +1041,13 @@
 
             // 显示搜索建议
             function displaySearchSuggestions(suggestions) {
-                if (suggestions.length > 0) {
+                // 移除之前的建议
+                const existingSuggestions = document.querySelector('.search-suggestions-results');
+                if (existingSuggestions) {
+                    existingSuggestions.remove();
+                }
+                
+                if (suggestions && suggestions.length > 0) {
                     // 在结果后面添加建议
                     const suggestionsHtml = `
                         <div class="search-suggestions-results">
@@ -1017,10 +1075,36 @@
 
             // 显示结果
             function displayResults(movies) {
+                console.log('displayResults called - Type:', typeof movies, 'IsArray:', Array.isArray(movies), 'Length:', Array.isArray(movies) ? movies.length : 'N/A');
+                
                 // 清空结果容器
                 resultsContainer.innerHTML = '';
                 
-                if (!movies || movies.length === 0) {
+                // 多层次的类型检查和数据提取
+                let movieArray = [];
+                
+                if (Array.isArray(movies)) {
+                    // 直接是数组
+                    movieArray = movies;
+                } else if (movies && typeof movies === 'object') {
+                    // 可能是响应对象，尝试提取movies字段
+                    if (Array.isArray(movies.movies)) {
+                        movieArray = movies.movies;
+                        console.log('Extracted movies array from response object');
+                    } else {
+                        console.warn('displayResults: movies object does not contain valid movies array:', movies);
+                    }
+                } else {
+                    console.warn('displayResults: Invalid input type:', typeof movies, movies);
+                }
+                
+                // 最终检查确保是数组
+                if (!Array.isArray(movieArray)) {
+                    console.error('displayResults: Failed to extract valid movies array, falling back to empty array');
+                    movieArray = [];
+                }
+                
+                if (movieArray.length === 0) {
                     resultsContainer.innerHTML = `
                         <div class="no-results">
                             <i class="fas fa-film"></i>
@@ -1031,10 +1115,16 @@
                     return;
                 }
                 
+                console.log(`Successfully displaying ${movieArray.length} movies`);
+                
                 // 添加每个电影卡片
-                movies.forEach((movie, index) => {
-                    const movieElement = createMovieCard(movie, index);
-                    resultsContainer.appendChild(movieElement);
+                movieArray.forEach((movie, index) => {
+                    if (movie && typeof movie === 'object' && movie.title) {
+                        const movieElement = createMovieCard(movie, index);
+                        resultsContainer.appendChild(movieElement);
+                    } else {
+                        console.warn('Invalid movie object at index', index, ':', movie);
+                    }
                 });
             }
 
