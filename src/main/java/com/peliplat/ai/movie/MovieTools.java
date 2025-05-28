@@ -168,7 +168,7 @@ public class MovieTools {
      * 按地区和类型搜索电影
      * 专门用于搜索特定地区的特定类型电影，如中国历史片、韩国爱情片等
      */
-    @Tool(description = "按地区和类型搜索电影。当用户询问特定地区的特定类型电影时使用，如'中国历史革命片'、'韩国爱情片'、'日本动画电影'等", returnDirect = true)
+    @Tool(description = "按地区和类型搜索电影。当用户询问特定地区的特定类型电影时首先使用，如'中国历史革命片'、'韩国爱情片'等。如果返回的结果不是该地区的电影或结果不准确，请立即使用smartMovieSearch工具根据具体电影名称重新搜索", returnDirect = true)
     public Response searchMoviesByRegionAndGenre(
             @ToolParam(description = "地区/国家，影响搜索的电影来源：中国用'zh'，韩国用'ko'，日本用'ja'，美国/英语地区用'en'等") String region,
             @ToolParam(description = "电影类型，支持的类型有：Action, Adventure, Animation, Comedy, Crime, Documentary, Drama, Family, Fantasy, History, Horror, Music, Mystery, Romance, Thriller, War, Western, Sci-Fi, Biography, Film-Noir, Musical。革命片可以使用History,War组合") String genre,
@@ -189,6 +189,51 @@ public class MovieTools {
             }
         } catch (Exception e) {
             logger.error("按地区和类型搜索电影失败", e);
+            return new Response(new ArrayList<>());
+        }
+    }
+
+    /**
+     * 智能电影搜索工具
+     * 当地区+类型搜索结果不理想时，自动推断具体电影名称并批量搜索
+     */
+    @Tool(description = "智能电影搜索。当用户查询特定地区特定类型电影（如'中国历史革命片'）但通过地区搜索结果不准确时，请根据查询内容推断出3-5个具体的代表性电影英文名称，然后调用此工具进行批量搜索。例如：中国历史革命片可以搜索'The Founding of a Republic,Beginning of the Great Revival,Assembly,Battle of Changping,Red Cliff'", returnDirect = true)
+    public Response smartMovieSearch(
+            @ToolParam(description = "根据用户查询推断出的具体电影英文名称，用逗号分隔。例如'The Founding of a Republic,Beginning of the Great Revival,Assembly'。请推断该地区该类型最具代表性的电影") String movieNames,
+            @ToolParam(description = "电影信息显示的语言代码：中国电影用'zh'，韩国电影用'ko'，日本电影用'ja'，英语电影用'en'") String language) {
+
+        try {
+            if (!StringUtils.hasText(movieNames)) {
+                logger.error("Invalid request: movieNames is required for smart search");
+                return new Response(new ArrayList<>());
+            }
+
+            logger.info("智能电影搜索请求: 电影名称={}, 语言={}", movieNames, language);
+
+            String languageCode = language != null ? language : "en";
+            
+            // 将电影名称分割成列表
+            List<String> movieList = Arrays.stream(movieNames.split(","))
+                    .map(String::trim)
+                    .filter(name -> !name.isEmpty())
+                    .collect(Collectors.toList());
+
+            if (movieList.isEmpty()) {
+                logger.error("No valid movie names after parsing");
+                return new Response(new ArrayList<>());
+            }
+
+            // 使用并发搜索方法
+            MovieListResponseVo responseVo = movieSearchService.concurrentSearchMoviesForVo(movieList, languageCode);
+
+            if (responseVo.getResult() == null || responseVo.getResult().isEmpty()) {
+                return new Response(new ArrayList<>());
+            } else {
+                // 直接返回电影对象列表
+                return new Response(responseVo.getResult());
+            }
+        } catch (Exception e) {
+            logger.error("智能电影搜索失败", e);
             return new Response(new ArrayList<>());
         }
     }
