@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI搜索测试页面</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-case { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .query { font-weight: bold; color: #2196F3; }
+        .result { background: #f5f5f5; padding: 10px; margin-top: 10px; border-radius: 3px; }
+        .step { margin: 5px 0; padding: 5px; background: #e3f2fd; border-radius: 3px; }
+        button { background: #4CAF50; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #45a049; }
+        .loading { color: #ff9800; }
+        .completed { color: #4caf50; }
+        .error { color: #f44336; }
+    </style>
+</head>
+<body>
+    <h1>🤖 AI电影搜索测试</h1>
+    
+    <div class="test-case">
+        <h3>测试案例1：描述性查询</h3>
+        <div class="query">我想看黄色海绵的电影</div>
+        <button onclick="testQuery('我想看黄色海绵的电影', 'test1')">测试</button>
+        <div id="test1" class="result"></div>
+    </div>
+    
+    <div class="test-case">
+        <h3>测试案例2：英雄电影</h3>
+        <div class="query">推荐一些蜘蛛侠电影</div>
+        <button onclick="testQuery('推荐一些蜘蛛侠电影', 'test2')">测试</button>
+        <div id="test2" class="result"></div>
+    </div>
+    
+    <div class="test-case">
+        <h3>测试案例3：类型搜索</h3>
+        <div class="query">sci-fi movies 2023</div>
+        <button onclick="testQuery('sci-fi movies 2023', 'test3')">测试</button>
+        <div id="test3" class="result"></div>
+    </div>
+    
+    <div class="test-case">
+        <h3>自定义查询</h3>
+        <input type="text" id="customQuery" placeholder="输入您的查询..." style="width: 300px; padding: 8px;">
+        <button onclick="testCustomQuery()">测试</button>
+        <div id="customResult" class="result"></div>
+    </div>
+
+    <script>
+        function testQuery(query, resultId) {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.innerHTML = '<div class="loading">🔄 正在搜索...</div>';
+            
+            const encodedQuery = encodeURIComponent(query);
+            const eventSource = new EventSource(`/api/movie-tool/smart-search?query=${encodedQuery}`);
+            
+            let steps = [];
+            let startTime = Date.now();
+            
+            eventSource.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.type === 'step') {
+                        steps.push(`<div class="step">${data.title} - ${data.status}</div>`);
+                        updateResult(resultDiv, steps, `执行中... (${Math.round((Date.now() - startTime)/1000)}秒)`);
+                    } else if (data.type === 'progress') {
+                        steps.push(`<div class="step">📋 ${data.message}</div>`);
+                        if (data.intent) steps.push(`<div class="step">🎯 意图: ${data.intent}</div>`);
+                        if (data.keywords) steps.push(`<div class="step">🔑 关键词: ${data.keywords.join(', ')}</div>`);
+                        updateResult(resultDiv, steps, `分析中...`);
+                    } else if (data.type === 'complete') {
+                        const result = data.result;
+                        const movies = result.movies || [];
+                        const executionTime = Math.round((Date.now() - startTime)/1000);
+                        
+                        steps.push(`<div class="step completed">✅ 完成！找到 ${movies.length} 部电影 (${executionTime}秒)</div>`);
+                        
+                        if (movies.length > 0) {
+                            steps.push('<div class="step"><strong>前3部电影：</strong></div>');
+                            movies.slice(0, 3).forEach((movie, i) => {
+                                steps.push(`<div class="step">${i+1}. ${movie.title} (${movie.publicationYear || 'N/A'})</div>`);
+                            });
+                        }
+                        
+                        updateResult(resultDiv, steps, '');
+                        eventSource.close();
+                    } else if (data.type === 'error') {
+                        steps.push(`<div class="step error">❌ 错误: ${data.error}</div>`);
+                        updateResult(resultDiv, steps, '');
+                        eventSource.close();
+                    }
+                } catch (e) {
+                    console.error('解析响应失败:', e);
+                }
+            };
+            
+            eventSource.onerror = function(event) {
+                steps.push(`<div class="step error">❌ 连接错误</div>`);
+                updateResult(resultDiv, steps, '');
+                eventSource.close();
+            };
+        }
+        
+        function updateResult(resultDiv, steps, status) {
+            resultDiv.innerHTML = steps.join('') + (status ? `<div class="loading">${status}</div>` : '');
+        }
+        
+        function testCustomQuery() {
+            const query = document.getElementById('customQuery').value.trim();
+            if (query) {
+                testQuery(query, 'customResult');
+            }
+        }
+    </script>
+</body>
+</html>

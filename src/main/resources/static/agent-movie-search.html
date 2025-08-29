@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能体电影推荐 - 流式输出测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0 0 8px 0;
+            font-size: 2em;
+            font-weight: 600;
+        }
+
+        .header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 24px;
+        }
+
+        .search-section {
+            margin-bottom: 24px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 14px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            border-color: #667eea;
+        }
+
+        .search-btn {
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            min-width: 120px;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .search-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .example-tag {
+            padding: 6px 12px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .example-tag:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .status-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+            min-height: 60px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .status-loading {
+            background: #ffc107;
+            animation: pulse 2s infinite;
+        }
+
+        .status-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-error {
+            background: #dc3545;
+            color: white;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .movies-section {
+            margin-bottom: 24px;
+        }
+
+        .movies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .movie-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .movie-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        }
+
+        .movie-poster {
+            width: 100%;
+            height: 200px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            font-size: 48px;
+        }
+
+        .movie-info {
+            padding: 12px;
+        }
+
+        .movie-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .movie-year {
+            color: #6c757d;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+
+        .movie-rating {
+            background: #28a745;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            display: inline-block;
+        }
+
+        .explanation-section {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 24px;
+        }
+
+        .explanation-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #333;
+        }
+
+        .explanation-text {
+            line-height: 1.6;
+            color: #555;
+            font-size: 15px;
+        }
+
+        .typing-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 1em;
+            background: #667eea;
+            margin-left: 2px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 智能体电影推荐</h1>
+            <p>基于阿里云通义千问智能体的专业电影推荐系统</p>
+        </div>
+        
+        <div class="content">
+            <!-- 搜索区域 -->
+            <div class="search-section">
+                <div class="search-box">
+                    <input type="text" class="search-input" id="queryInput" placeholder="请输入您想要的电影类型，如：推荐一些爱国主义电影" value="">
+                    <button class="search-btn" id="searchBtn">开始推荐</button>
+                </div>
+                
+                <div class="examples">
+                    <div class="example-tag" data-query="推荐一些爱国主义电影">爱国主义电影</div>
+                    <div class="example-tag" data-query="推荐一些科幻电影">科幻电影</div>
+                    <div class="example-tag" data-query="推荐一些悬疑电影">悬疑电影</div>
+                    <div class="example-tag" data-query="推荐一些经典老电影">经典老电影</div>
+                    <div class="example-tag" data-query="推荐一些搞笑电影">搞笑电影</div>
+                </div>
+            </div>
+            
+            <!-- 状态显示区域 -->
+            <div class="status-section" id="statusSection">
+                <div style="text-align: center; color: #6c757d; padding: 20px;">
+                    请输入您的电影推荐需求，智能体将为您分析并推荐相关电影
+                </div>
+            </div>
+            
+            <!-- 电影展示区域 -->
+            <div class="movies-section" id="moviesSection" style="display: none;">
+                <h3>🎯 推荐电影</h3>
+                <div class="movies-grid" id="moviesGrid">
+                </div>
+            </div>
+            
+            <!-- 解释说明区域 -->
+            <div class="explanation-section" id="explanationSection" style="display: none;">
+                <div class="explanation-title">💡 推荐理由</div>
+                <div class="explanation-text" id="explanationText"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const queryInput = document.getElementById('queryInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const statusSection = document.getElementById('statusSection');
+        const moviesSection = document.getElementById('moviesSection');
+        const moviesGrid = document.getElementById('moviesGrid');
+        const explanationSection = document.getElementById('explanationSection');
+        const explanationText = document.getElementById('explanationText');
+        
+        let currentEventSource = null;
+        
+        // 示例标签点击事件
+        document.querySelectorAll('.example-tag').forEach(tag => {
+            tag.addEventListener('click', () => {
+                queryInput.value = tag.dataset.query;
+            });
+        });
+        
+        // 搜索按钮点击事件
+        searchBtn.addEventListener('click', () => {
+            const query = queryInput.value.trim();
+            if (!query) {
+                alert('请输入搜索内容');
+                return;
+            }
+            startSearch(query);
+        });
+        
+        // 回车键搜索
+        queryInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                searchBtn.click();
+            }
+        });
+        
+        function startSearch(query) {
+            // 关闭之前的连接
+            if (currentEventSource) {
+                currentEventSource.close();
+            }
+            
+            // 重置UI
+            searchBtn.disabled = true;
+            searchBtn.textContent = '推荐中...';
+            statusSection.innerHTML = '';
+            moviesSection.style.display = 'none';
+            explanationSection.style.display = 'none';
+            moviesGrid.innerHTML = '';
+            explanationText.innerHTML = '';
+            
+            // 创建SSE连接
+            const encodedQuery = encodeURIComponent(query);
+            currentEventSource = new EventSource(`/api/movie-tool/agent-search?query=${encodedQuery}`);
+            
+            currentEventSource.addEventListener('start', (event) => {
+                const data = JSON.parse(event.data);
+                addStatusItem('🤖 智能体分析中...', 'loading');
+            });
+            
+            currentEventSource.addEventListener('movies_extracted', (event) => {
+                const data = JSON.parse(event.data);
+                addStatusItem(`🎯 提取到 ${data.count} 部电影，开始搜索...`, 'success');
+                console.log('提取的电影名称:', data.movieNames);
+            });
+            
+            currentEventSource.addEventListener('movies_found', (event) => {
+                const data = JSON.parse(event.data);
+                addStatusItem(`✅ 找到 ${data.totalCount} 部电影 (${data.executionTime}ms)`, 'success');
+                displayMovies(data.movies);
+            });
+            
+            currentEventSource.addEventListener('explanation_chunk', (event) => {
+                const data = JSON.parse(event.data);
+                appendExplanation(data.text, data.isLast);
+            });
+            
+            currentEventSource.addEventListener('complete', (event) => {
+                const data = JSON.parse(event.data);
+                addStatusItem(`🎉 推荐完成，共找到 ${data.totalMovies} 部电影`, 'success');
+                searchBtn.disabled = false;
+                searchBtn.textContent = '开始推荐';
+                currentEventSource.close();
+                currentEventSource = null;
+            });
+            
+            currentEventSource.addEventListener('error', (event) => {
+                const data = JSON.parse(event.data);
+                addStatusItem(`❌ ${data.message}`, 'error');
+                searchBtn.disabled = false;
+                searchBtn.textContent = '开始推荐';
+                currentEventSource.close();
+                currentEventSource = null;
+            });
+            
+            currentEventSource.onerror = function(event) {
+                console.error('SSE连接错误:', event);
+                addStatusItem('❌ 连接中断，请重试', 'error');
+                searchBtn.disabled = false;
+                searchBtn.textContent = '开始推荐';
+                if (currentEventSource) {
+                    currentEventSource.close();
+                    currentEventSource = null;
+                }
+            };
+        }
+        
+        function addStatusItem(message, type) {
+            const statusItem = document.createElement('div');
+            statusItem.className = 'status-item';
+            
+            const icon = document.createElement('div');
+            icon.className = `status-icon status-${type}`;
+            icon.textContent = type === 'loading' ? '⏳' : type === 'success' ? '✓' : '✗';
+            
+            const text = document.createElement('div');
+            text.textContent = message;
+            
+            statusItem.appendChild(icon);
+            statusItem.appendChild(text);
+            statusSection.appendChild(statusItem);
+        }
+        
+        function displayMovies(movies) {
+            if (movies.length === 0) {
+                moviesSection.style.display = 'none';
+                return;
+            }
+            
+            moviesSection.style.display = 'block';
+            moviesGrid.innerHTML = '';
+            
+            movies.forEach(movie => {
+                const movieCard = document.createElement('div');
+                movieCard.className = 'movie-card';
+                
+                const poster = document.createElement('div');
+                poster.className = 'movie-poster';
+                if (movie.photoUrl) {
+                    poster.innerHTML = `<img src="${movie.photoUrl}" alt="${movie.title}" style="width:100%;height:100%;object-fit:cover;">`;
+                } else {
+                    poster.innerHTML = '🎬';
+                }
+                
+                const info = document.createElement('div');
+                info.className = 'movie-info';
+                
+                const title = document.createElement('div');
+                title.className = 'movie-title';
+                title.textContent = movie.title || '未知电影';
+                
+                const year = document.createElement('div');
+                year.className = 'movie-year';
+                year.textContent = movie.publicationYear || '年份未知';
+                
+                const rating = document.createElement('div');
+                rating.className = 'movie-rating';
+                rating.textContent = movie.rating ? `⭐ ${movie.rating}` : '暂无评分';
+                
+                info.appendChild(title);
+                info.appendChild(year);
+                info.appendChild(rating);
+                
+                movieCard.appendChild(poster);
+                movieCard.appendChild(info);
+                moviesGrid.appendChild(movieCard);
+            });
+        }
+        
+        function appendExplanation(text, isLast) {
+            if (explanationSection.style.display === 'none') {
+                explanationSection.style.display = 'block';
+            }
+            
+            explanationText.innerHTML += text;
+            
+            if (!isLast) {
+                // 添加打字机光标效果
+                const cursor = document.createElement('span');
+                cursor.className = 'typing-cursor';
+                explanationText.appendChild(cursor);
+                
+                // 移除之前的光标
+                setTimeout(() => {
+                    const cursors = explanationText.querySelectorAll('.typing-cursor');
+                    if (cursors.length > 1) {
+                        cursors[0].remove();
+                    }
+                }, 100);
+            } else {
+                // 移除所有光标
+                const cursors = explanationText.querySelectorAll('.typing-cursor');
+                cursors.forEach(cursor => cursor.remove());
+            }
+        }
+        
+        // 页面离开时关闭连接
+        window.addEventListener('beforeunload', () => {
+            if (currentEventSource) {
+                currentEventSource.close();
+            }
+        });
+    </script>
+</body>
+</html>

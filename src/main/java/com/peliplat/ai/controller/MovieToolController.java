@@ -7,6 +7,7 @@ import com.peliplat.ai.model.MovieListResponseVo;
 import com.peliplat.ai.model.SearchResultVo;
 import com.peliplat.ai.movie.MovieTools;
 import com.peliplat.ai.service.AiModelFactory;
+import com.peliplat.ai.service.DashscopeMovieAgentService;
 import com.peliplat.ai.service.MovieSearchService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,15 +24,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -806,6 +802,214 @@ public class MovieToolController {
 
             return ResponseEntity.status(500).body(errorResult);
         }
+    }
+    
+    // ==================================================
+    // 智能体电影推荐接口
+    // ==================================================
+    
+    @Autowired
+    private DashscopeMovieAgentService dashscopeMovieAgentService;
+    
+    /**
+     * 智能体电影推荐 + 并发搜索 + 流式输出
+     */
+    @Operation(summary = "智能体电影推荐 - 流式输出优化版")
+    @GetMapping(value = "/api/movie-tool/agent-search", produces = "text/event-stream")
+    public ResponseEntity<SseEmitter> agentMovieSearch(
+            @Parameter(description = "用户查询，如'推荐一些爱国主义电影'") @RequestParam("query") String query) {
+        
+        SseEmitter emitter = new SseEmitter(300000L); // 5分钟超时
+        
+        CompletableFuture.runAsync(() -> {
+            try {
+                logger.info("🚀 启动智能体电影推荐流程，查询: {}", query);
+                long startTime = System.currentTimeMillis();
+                
+                // 发送开始事件
+                emitter.send(SseEmitter.event()
+                    .name("start")
+                    .data(Map.of(
+                        "message", "智能体正在分析您的查询...",
+                        "timestamp", System.currentTimeMillis()
+                    )));
+                
+                // 调用智能体获取推荐
+                dashscopeMovieAgentService.streamMovieRecommendation(query)
+                    .thenAccept(result -> {
+                        try {
+                            List<String> movieNames = result.getMovieNames();
+                            
+                            if (!movieNames.isEmpty()) {
+                                // 发送提取到的电影名称
+                                emitter.send(SseEmitter.event()
+                                    .name("movies_extracted")
+                                    .data(Map.of(
+                                        "movieNames", movieNames,
+                                        "count", movieNames.size(),
+                                        "message", "开始搜索推荐的电影...",
+                                        "timestamp", System.currentTimeMillis()
+                                    )));
+                                
+                                // 并发搜索提取到的电影
+                                List<CompletableFuture<MovieDetailVo>> searchFutures = movieNames.parallelStream()
+                                    .map(movieName -> CompletableFuture.supplyAsync(() -> {
+                                        try {
+                                            logger.debug("🔍 搜索电影: {}", movieName);
+                                            MovieListResponseVo responseVo = movieSearchService.searchMoviesByQueryForVo(
+                                                movieName, "zh"
+                                            );
+                                            
+                                            if (responseVo != null && responseVo.getResult() != null && !responseVo.getResult().isEmpty()) {
+                                                MovieDetailVo movie = responseVo.getResult().get(0);
+                                                logger.debug("✅ 找到电影: {} ({})", movie.getTitle(), movie.getPublicationYear());
+                                                return movie;
+                                            }
+                                            return null;
+                                        } catch (Exception e) {
+                                            logger.warn("⚠️ 搜索电影失败: {}", movieName, e);
+                                            return null;
+                                        }
+                                    }))
+                                    .collect(Collectors.toList());
+                                
+                                // 等待所有搜索完成
+                                CompletableFuture<Void> allSearches = CompletableFuture.allOf(
+                                    searchFutures.toArray(new CompletableFuture[0])
+                                );
+                                
+                                allSearches.thenRun(() -> {
+                                    try {
+                                        List<MovieDetailVo> foundMovies = searchFutures.stream()
+                                            .map(CompletableFuture::join)
+                                            .filter(Objects::nonNull)
+                                            .collect(Collectors.toList());
+                                        
+                                        long endTime = System.currentTimeMillis();
+                                        
+                                        // 发送搜索结果
+                                        emitter.send(SseEmitter.event()
+                                            .name("movies_found")
+                                            .data(Map.of(
+                                                "movies", foundMovies,
+                                                "totalCount", foundMovies.size(),
+                                                "executionTime", endTime - startTime,
+                                                "timestamp", System.currentTimeMillis()
+                                            )));
+                                        
+                                        // 流式输出智能体的解释内容
+                                        String explanation = result.getExplanation();
+                                        if (explanation != null && !explanation.trim().isEmpty()) {
+                                            // 将解释内容分段发送（模拟打字机效果）
+                                            String[] sentences = explanation.split("。");
+                                            for (int i = 0; i < sentences.length; i++) {
+                                                if (!sentences[i].trim().isEmpty()) {
+                                                    Thread.sleep(500); // 500ms间隔
+                                                    emitter.send(SseEmitter.event()
+                                                        .name("explanation_chunk")
+                                                        .data(Map.of(
+                                                            "text", sentences[i] + (i < sentences.length - 1 ? "。" : ""),
+                                                            "isLast", i == sentences.length - 1,
+                                                            "timestamp", System.currentTimeMillis()
+                                                        )));
+                                                }
+                                            }
+                                        }
+                                        
+                                        // 发送完成事件
+                                        emitter.send(SseEmitter.event()
+                                            .name("complete")
+                                            .data(Map.of(
+                                                "message", "推荐完成",
+                                                "totalMovies", foundMovies.size(),
+                                                "executionTime", endTime - startTime,
+                                                "timestamp", System.currentTimeMillis()
+                                            )));
+                                        
+                                        emitter.complete();
+                                        
+                                    } catch (Exception e) {
+                                        logger.error("❌ 发送搜索结果失败", e);
+                                        emitter.completeWithError(e);
+                                    }
+                                });
+                                
+                            } else {
+                                // 没有提取到电影名称
+                                emitter.send(SseEmitter.event()
+                                    .name("error")
+                                    .data(Map.of(
+                                        "message", "智能体未能识别出具体的电影推荐",
+                                        "explanation", result.getExplanation(),
+                                        "timestamp", System.currentTimeMillis()
+                                    )));
+                                emitter.complete();
+                            }
+                            
+                        } catch (Exception e) {
+                            logger.error("❌ 处理智能体结果失败", e);
+                            try {
+                                emitter.send(SseEmitter.event()
+                                    .name("error")
+                                    .data(Map.of(
+                                        "message", "处理推荐结果时出现错误",
+                                        "error", e.getMessage(),
+                                        "timestamp", System.currentTimeMillis()
+                                    )));
+                            } catch (Exception sendError) {
+                                logger.error("发送错误消息失败", sendError);
+                            }
+                            emitter.completeWithError(e);
+                        }
+                    })
+                    .exceptionally(throwable -> {
+                        logger.error("❌ 智能体调用失败", throwable);
+                        try {
+                            emitter.send(SseEmitter.event()
+                                .name("error")
+                                .data(Map.of(
+                                    "message", "智能体服务暂时不可用",
+                                    "error", throwable.getMessage(),
+                                    "timestamp", System.currentTimeMillis()
+                                )));
+                        } catch (Exception e) {
+                            logger.error("发送错误消息失败", e);
+                        }
+                        emitter.completeWithError(throwable);
+                        return null;
+                    });
+                
+            } catch (Exception e) {
+                logger.error("❌ 智能体电影搜索启动失败", e);
+                try {
+                    emitter.send(SseEmitter.event()
+                        .name("error")
+                        .data(Map.of(
+                            "message", "服务启动失败",
+                            "error", e.getMessage(),
+                            "timestamp", System.currentTimeMillis()
+                        )));
+                } catch (Exception sendError) {
+                    logger.error("发送启动错误消息失败", sendError);
+                }
+                emitter.completeWithError(e);
+            }
+        });
+        
+        // 设置超时和错误处理
+        emitter.onTimeout(() -> {
+            logger.warn("⏰ SSE连接超时");
+            emitter.complete();
+        });
+        
+        emitter.onError(throwable -> {
+            logger.error("❌ SSE连接发生错误", throwable);
+        });
+        
+        return ResponseEntity.ok()
+            .header("Cache-Control", "no-cache")
+            .header("Connection", "keep-alive")
+            .body(emitter);
     }
     
     /**
