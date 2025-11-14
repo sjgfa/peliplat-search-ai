@@ -1064,8 +1064,22 @@
                     return;
                 }
 
+                // 按年份倒序排列（确保前端显示顺序正确）
+                const sortedMovies = [...movies].sort((a, b) => {
+                    const yearA = a.publicationYear;
+                    const yearB = b.publicationYear;
+
+                    // null 排在后面
+                    if (yearA == null && yearB == null) return 0;
+                    if (yearA == null) return 1;
+                    if (yearB == null) return -1;
+
+                    // 倒序：年份大的在前
+                    return yearB - yearA;
+                });
+
                 // 添加每个电影卡片
-                movies.forEach((movie, index) => {
+                sortedMovies.forEach((movie, index) => {
                     if (movie && typeof movie === 'object' && movie.title) {
                         const movieElement = createMovieCard(movie, index);
                         resultsContainer.appendChild(movieElement);

@@ -843,8 +843,20 @@ public class MovieToolController {
                 List<MovieDetailVo> keywordSearchResults = keywordSearchService.searchMoviesByQuery(query, "en");
 
                 if (keywordSearchResults != null && !keywordSearchResults.isEmpty()) {
+                    // 按年份倒序排列
+                    keywordSearchResults = keywordSearchResults.stream()
+                        .sorted((m1, m2) -> {
+                            Integer year1 = m1.getPublicationYear();
+                            Integer year2 = m2.getPublicationYear();
+                            if (year1 == null && year2 == null) return 0;
+                            if (year1 == null) return 1;  // null排在后面
+                            if (year2 == null) return -1; // null排在后面
+                            return year2.compareTo(year1); // 倒序：新的在前
+                        })
+                        .collect(Collectors.toList());
+
                     // 找到了关键词匹配的电影，直接返回结果
-                    logger.info("✅ 关键词搜索成功，找到 {} 部电影，跳过AI推荐", keywordSearchResults.size());
+                    logger.info("✅ 关键词搜索成功，找到 {} 部电影（已按年份倒序），跳过AI推荐", keywordSearchResults.size());
 
                     // 发送搜索方式通知
                     emitter.send(SseEmitter.event()
@@ -865,6 +877,7 @@ public class MovieToolController {
                             "totalCount", keywordSearchResults.size(),
                             "executionTime", endTime - startTime,
                             "searchMethod", "关键词匹配",
+                            "sortedBy", "关键词匹配 + 年份倒序",
                             "timestamp", System.currentTimeMillis()
                         )));
 
