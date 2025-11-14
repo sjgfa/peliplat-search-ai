@@ -31,7 +31,7 @@ public class MovieDetailVo {
     private String summary;
     private Boolean inWatchlist;
     private String totalGross;
-    private List<String> plotKeywords;
+    private List<Object> plotKeywords;
     private String languageCodes;
     private List<PersonVo> directors;
     private List<PersonVo> actors;
@@ -239,11 +239,11 @@ public class MovieDetailVo {
         this.totalGross = totalGross;
     }
 
-    public List<String> getPlotKeywords() {
+    public List<Object> getPlotKeywords() {
         return plotKeywords;
     }
 
-    public void setPlotKeywords(List<String> plotKeywords) {
+    public void setPlotKeywords(List<Object> plotKeywords) {
         this.plotKeywords = plotKeywords;
     }
 

@@ -3,260 +3,483 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能体电影推荐 - 流式输出测试</title>
+    <title>PeliPlat AI - 智能体电影推荐</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #ff0055;
+            --secondary-color: #00e5ff;
+            --bg-color: #050505;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --text-color: #fff;
+            --text-sec: #aaaaaa;
+            --shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            --transition: all 0.4s cubic-bezier(0.215, 0.610, 0.355, 1);
+            --border-radius: 16px;
+            --card-blur: blur(10px);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 0;
+            margin: 0;
             min-height: 100vh;
-            padding: 20px;
+            overflow-x: hidden;
+            perspective: 1000px;
+        }
+
+        /* 背景动态光效 */
+        .bg-glow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background:
+                radial-gradient(circle at 15% 50%, rgba(255, 0, 85, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(0, 229, 255, 0.15), transparent 25%);
+            filter: blur(50px);
+            animation: bgPulse 10s infinite alternate;
+        }
+
+        @keyframes bgPulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.1); opacity: 1; }
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 1400px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
+            padding: 20px;
         }
 
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 24px;
+        /* Hero 区域样式 */
+        .hero-section {
+            min-height: 70vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: visible;
+            margin-bottom: 60px;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 10;
             text-align: center;
+            margin-bottom: 40px;
         }
 
-        .header h1 {
-            margin: 0 0 8px 0;
-            font-size: 2em;
-            font-weight: 600;
+        /* 3D 场景核心 */
+        .scene {
+            width: 260px;
+            height: 400px;
+            position: relative;
+            perspective: 1000px;
+            margin: 40px auto;
         }
 
-        .header p {
-            margin: 0;
-            opacity: 0.9;
-            font-size: 1.1em;
+        .carousel {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            transform-style: preserve-3d;
+            animation: rotate 20s infinite linear;
         }
 
-        .content {
-            padding: 24px;
+        .carousel:hover {
+            animation-play-state: paused;
         }
 
-        .search-section {
-            margin-bottom: 24px;
+        .carousel__cell {
+            position: absolute;
+            width: 240px;
+            height: 360px;
+            left: 10px;
+            top: 10px;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid rgba(255,255,255,0.1);
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .carousel__cell img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(0.7);
+            transition: filter 0.3s;
+        }
+
+        .carousel__cell:hover img {
+            filter: brightness(1.1);
+        }
+
+        .carousel__cell:nth-child(1) { transform: rotateY(0deg) translateZ(350px); }
+        .carousel__cell:nth-child(2) { transform: rotateY(60deg) translateZ(350px); }
+        .carousel__cell:nth-child(3) { transform: rotateY(120deg) translateZ(350px); }
+        .carousel__cell:nth-child(4) { transform: rotateY(180deg) translateZ(350px); }
+        .carousel__cell:nth-child(5) { transform: rotateY(240deg) translateZ(350px); }
+        .carousel__cell:nth-child(6) { transform: rotateY(300deg) translateZ(350px); }
+
+        @keyframes rotate {
+            from { transform: rotateY(0deg); }
+            to { transform: rotateY(360deg); }
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            position: relative;
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            border-radius: 3px;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: 2px;
+            font-weight: 700;
+            animation: fadeIn 1s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .subtitle {
+            font-size: 1.3rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 20px;
+            animation: fadeIn 1.2s ease;
+        }
+
+        .search-suggestions {
+            margin-bottom: 40px;
+            text-align: center;
+            animation: slideIn 1.8s ease;
+        }
+
+        .search-suggestions h3 {
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .suggestion-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .suggestion-tag {
+            position: relative;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 12px 24px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.95rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .suggestion-tag::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg,
+                transparent,
+                rgba(255, 255, 255, 0.1),
+                transparent);
+            transition: left 0.5s;
+        }
+
+        .suggestion-tag:hover::before {
+            left: 100%;
+        }
+
+        .suggestion-tag::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 30px;
+            padding: 1px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .suggestion-tag:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 8px 24px rgba(255, 0, 85, 0.2),
+                        0 0 0 1px rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .suggestion-tag:hover::after {
+            opacity: 1;
+        }
+
+        .suggestion-tag:active {
+            transform: translateY(0) scale(0.98);
         }
 
         .search-box {
             display: flex;
-            gap: 12px;
-            margin-bottom: 16px;
+            align-items: center;
+            margin-bottom: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: var(--card-blur);
+            -webkit-backdrop-filter: var(--card-blur);
+            border-radius: 50px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: var(--transition);
+            animation: slideIn 1.5s ease;
         }
 
-        .search-input {
+        @keyframes slideIn {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .search-box:focus-within {
+            box-shadow: 0 15px 30px rgba(255, 0, 85, 0.3);
+            transform: translateY(-5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        #search-input {
             flex: 1;
-            padding: 14px 16px;
-            border: 2px solid #e1e5e9;
-            border-radius: 12px;
-            font-size: 16px;
+            border: none;
+            padding: 20px 25px;
+            font-size: 1.1rem;
             outline: none;
-            transition: border-color 0.3s;
+            background: transparent;
+            color: white;
+            font-family: 'Montserrat', sans-serif;
         }
 
-        .search-input:focus {
-            border-color: #667eea;
+        #search-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
         }
 
-        .search-btn {
-            padding: 14px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        #search-button {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
             color: white;
             border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
+            padding: 18px 35px;
+            font-size: 1.1rem;
             cursor: pointer;
-            transition: transform 0.2s;
-            min-width: 120px;
-        }
-
-        .search-btn:hover {
-            transform: translateY(-2px);
-        }
-
-        .search-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .examples {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-        }
-
-        .example-tag {
-            padding: 6px 12px;
-            background: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 20px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .example-tag:hover {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-
-        .status-section {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 24px;
-            min-height: 60px;
-        }
-
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 8px 0;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .status-item:last-child {
-            border-bottom: none;
-        }
-
-        .status-icon {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
+            transition: var(--transition);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
         }
 
-        .status-loading {
-            background: #ffc107;
-            animation: pulse 2s infinite;
+        #search-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: var(--transition);
+            z-index: -1;
         }
 
-        .status-success {
-            background: #28a745;
-            color: white;
+        #search-button:hover::before {
+            width: 100%;
         }
 
-        .status-error {
-            background: #dc3545;
-            color: white;
+        #search-button i {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+
+        #search-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 40px 0;
         }
 
         @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
         }
 
-        .movies-section {
-            margin-bottom: 24px;
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid var(--secondary-color);
+            border-left: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1.2s linear infinite;
+            margin: 0 auto;
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.3);
         }
 
-        .movies-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 16px;
-            margin-top: 16px;
+        .loading p {
+            margin-top: 15px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.1rem;
+            animation: pulse 2s infinite;
         }
 
-        .movie-card {
-            background: white;
-            border: 1px solid #e9ecef;
-            border-radius: 12px;
-            overflow: hidden;
-            transition: transform 0.3s, box-shadow 0.3s;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
-        .movie-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        .loading-steps {
+            margin-top: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
-        .movie-poster {
-            width: 100%;
-            height: 200px;
-            background: #f8f9fa;
+        .step {
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: #6c757d;
-            font-size: 48px;
+            opacity: 0.4;
+            transition: var(--transition);
+            padding: 8px 15px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
         }
 
-        .movie-info {
-            padding: 12px;
+        .step.active {
+            opacity: 1;
+            background: rgba(255, 0, 85, 0.2);
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.3);
         }
 
-        .movie-title {
-            font-weight: 600;
-            margin-bottom: 4px;
-            font-size: 14px;
-            line-height: 1.4;
+        .step i {
+            margin-right: 12px;
+            font-size: 1.1rem;
+            color: var(--secondary-color);
         }
 
-        .movie-year {
-            color: #6c757d;
-            font-size: 12px;
-            margin-bottom: 8px;
-        }
-
-        .movie-rating {
-            background: #28a745;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 12px;
-            display: inline-block;
+        .step span {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.8);
         }
 
         .explanation-section {
-            background: #fff;
-            border: 1px solid #e9ecef;
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: var(--card-blur);
+            -webkit-backdrop-filter: var(--card-blur);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: fadeIn 0.8s ease;
         }
 
         .explanation-title {
-            font-size: 18px;
+            font-size: 1.4rem;
             font-weight: 600;
             margin-bottom: 16px;
-            color: #333;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+        }
+
+        .explanation-title i {
+            margin-right: 10px;
+            color: var(--secondary-color);
         }
 
         .explanation-text {
             line-height: 1.6;
-            color: #555;
-            font-size: 15px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
         }
 
         .typing-cursor {
             display: inline-block;
             width: 2px;
             height: 1em;
-            background: #667eea;
+            background: var(--secondary-color);
             margin-left: 2px;
             animation: blink 1s infinite;
         }
@@ -265,254 +488,703 @@
             0%, 50% { opacity: 1; }
             51%, 100% { opacity: 0; }
         }
+
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+            perspective: 1000px;
+        }
+
+        .movie-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: var(--card-blur);
+            -webkit-backdrop-filter: var(--card-blur);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            transform-style: preserve-3d;
+            animation: cardFadeIn 0.8s ease;
+        }
+
+        @keyframes cardFadeIn {
+            from { opacity: 0; transform: translateY(30px) rotateX(10deg); }
+            to { opacity: 1; transform: translateY(0) rotateX(0); }
+        }
+
+        .movie-card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .movie-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg,
+                       rgba(255, 0, 85, 0.15) 0%,
+                       rgba(0, 229, 255, 0.15) 100%);
+            opacity: 0;
+            transition: var(--transition);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .movie-card:hover::before {
+            opacity: 1;
+        }
+
+        /* 装饰性发光条 */
+        .movie-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s;
+            z-index: 20;
+        }
+
+        .movie-card:hover::after {
+            transform: scaleX(1);
+        }
+
+        .movie-poster {
+            width: 100%;
+            height: 380px;
+            object-fit: cover;
+            transition: var(--transition);
+        }
+
+        .movie-card:hover .movie-poster {
+            transform: scale(1.05);
+        }
+
+        .movie-info {
+            padding: 25px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 2;
+        }
+
+        .movie-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: var(--text-color);
+            line-height: 1.3;
+            background: linear-gradient(to right, #ffffff, #e6e6e6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .movie-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .year {
+            display: flex;
+            align-items: center;
+        }
+
+        .year i {
+            margin-right: 8px;
+            color: var(--secondary-color);
+        }
+
+        .rating {
+            display: flex;
+            align-items: center;
+        }
+
+        .rating i {
+            color: #ffcc00;
+            margin-right: 8px;
+            animation: starPulse 3s infinite;
+        }
+
+        @keyframes starPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .movie-type {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 7px 15px;
+            border-radius: 25px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            z-index: 10;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .no-results {
+            text-align: center;
+            grid-column: 1 / -1;
+            padding: 60px 40px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: var(--card-blur);
+            -webkit-backdrop-filter: var(--card-blur);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            animation: fadeIn 0.8s ease;
+        }
+
+        .no-results i {
+            font-size: 4rem;
+            color: rgba(255, 255, 255, 0.3);
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .no-results h3 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            color: var(--text-color);
+        }
+
+        .no-results p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.1rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .scene {
+                transform: scale(0.7) translateY(-20px);
+            }
+
+            .carousel__cell {
+                width: 180px;
+                height: 270px;
+            }
+
+            .carousel__cell:nth-child(1) { transform: rotateY(0deg) translateZ(250px); }
+            .carousel__cell:nth-child(2) { transform: rotateY(60deg) translateZ(250px); }
+            .carousel__cell:nth-child(3) { transform: rotateY(120deg) translateZ(250px); }
+            .carousel__cell:nth-child(4) { transform: rotateY(180deg) translateZ(250px); }
+            .carousel__cell:nth-child(5) { transform: rotateY(240deg) translateZ(250px); }
+            .carousel__cell:nth-child(6) { transform: rotateY(300deg) translateZ(250px); }
+
+            .search-box {
+                flex-direction: column;
+                border-radius: var(--border-radius);
+            }
+
+            #search-input {
+                width: 100%;
+                border-radius: var(--border-radius) var(--border-radius) 0 0;
+                padding: 15px 20px;
+            }
+
+            #search-button {
+                width: 100%;
+                border-radius: 0 0 var(--border-radius) var(--border-radius);
+                padding: 15px 20px;
+            }
+
+            .results {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .subtitle {
+                font-size: 1.1rem;
+            }
+
+            .hero-section {
+                min-height: 50vh;
+            }
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 70px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.9rem;
+            position: relative;
+        }
+
+        footer::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            border-radius: 3px;
+        }
     </style>
 </head>
 <body>
+    <!-- 动态背景光效 -->
+    <div class="bg-glow"></div>
+
+    <!-- Hero 区域 (3D 旋转木马) -->
+    <section class="hero-section">
+        <div class="scene">
+            <div class="carousel" id="movieCarousel">
+                <!-- 旋转木马中的电影海报将通过 JavaScript 动态填充 -->
+                <div class="carousel__cell"><img src="https://image.tmdb.org/t/p/w500/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg" alt="Poster 1"></div>
+                <div class="carousel__cell"><img src="https://image.tmdb.org/t/p/w500/r2J02Z2OpNTctfOSN1Ydgii51I3.jpg" alt="Poster 2"></div>
+                <div class="carousel__cell"><img src="https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg" alt="Poster 3"></div>
+                <div class="carousel__cell"><img src="https://image.tmdb.org/t/p/w500/iiZZdoQBEYBv6id8su7ImL0oCbD.jpg" alt="Poster 4"></div>
+                <div class="carousel__cell"><img src="https://image.tmdb.org/t/p/w500/db32LaOibwEliAmSL2jjDF6oDdj.jpg" alt="Poster 5"></div>
+                <div class="carousel__cell"><img src="https://image.tmdb.org/t/p/w500/t6HIqrRAclMCA60NsSmeqe9RmNV.jpg" alt="Poster 6"></div>
+            </div>
+        </div>
+
+        <div class="hero-content">
+            <h1>探索电影宇宙</h1>
+            <p class="subtitle">Peliplat AI - 智能体电影推荐系统</p>
+        </div>
+    </section>
+
     <div class="container">
-        <div class="header">
-            <h1>🎬 智能体电影推荐</h1>
-            <p>基于阿里云通义千问智能体的专业电影推荐系统</p>
-        </div>
-        
-        <div class="content">
-            <!-- 搜索区域 -->
-            <div class="search-section">
-                <div class="search-box">
-                    <input type="text" class="search-input" id="queryInput" placeholder="请输入您想要的电影类型，如：推荐一些爱国主义电影" value="">
-                    <button class="search-btn" id="searchBtn">开始推荐</button>
-                </div>
-                
-                <div class="examples">
-                    <div class="example-tag" data-query="推荐一些爱国主义电影">爱国主义电影</div>
-                    <div class="example-tag" data-query="推荐一些科幻电影">科幻电影</div>
-                    <div class="example-tag" data-query="推荐一些悬疑电影">悬疑电影</div>
-                    <div class="example-tag" data-query="推荐一些经典老电影">经典老电影</div>
-                    <div class="example-tag" data-query="推荐一些搞笑电影">搞笑电影</div>
-                </div>
-            </div>
-            
-            <!-- 状态显示区域 -->
-            <div class="status-section" id="statusSection">
-                <div style="text-align: center; color: #6c757d; padding: 20px;">
-                    请输入您的电影推荐需求，智能体将为您分析并推荐相关电影
-                </div>
-            </div>
-            
-            <!-- 电影展示区域 -->
-            <div class="movies-section" id="moviesSection" style="display: none;">
-                <h3>🎯 推荐电影</h3>
-                <div class="movies-grid" id="moviesGrid">
-                </div>
-            </div>
-            
-            <!-- 解释说明区域 -->
-            <div class="explanation-section" id="explanationSection" style="display: none;">
-                <div class="explanation-title">💡 推荐理由</div>
-                <div class="explanation-text" id="explanationText"></div>
+        <header style="border-bottom: none; padding-bottom: 0;">
+            <!-- Header 内容移到了上面的 hero-content -->
+        </header>
+
+        <!-- 添加搜索建议标签 -->
+        <div class="search-suggestions">
+            <h3>热门推荐</h3>
+            <div class="suggestion-tags">
+                <span class="suggestion-tag" data-query="推荐一些爱国主义电影">🇨🇳 爱国主义电影</span>
+                <span class="suggestion-tag" data-query="推荐一些科幻电影">🚀 科幻电影</span>
+                <span class="suggestion-tag" data-query="推荐一些悬疑电影">🕵️ 悬疑电影</span>
+                <span class="suggestion-tag" data-query="推荐一些经典老电影">🎭 经典老电影</span>
+                <span class="suggestion-tag" data-query="推荐一些搞笑电影">😂 搞笑电影</span>
+                <span class="suggestion-tag" data-query="推荐一些浪漫爱情电影">💕 浪漫爱情</span>
+                <span class="suggestion-tag" data-query="推荐一些动作电影">💥 动作电影</span>
+                <span class="suggestion-tag" data-query="推荐一些获奖电影">🏆 获奖电影</span>
             </div>
         </div>
+
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="请输入您想要的电影类型，如：推荐一些爱国主义电影..." autofocus>
+            <button id="search-button"><i class="fas fa-search"></i> 开始推荐</button>
+        </div>
+
+        <div class="loading">
+            <div class="loader"></div>
+            <p id="loading-text">智能体正在为您推荐电影...</p>
+            <div class="loading-steps">
+                <div class="step active" data-step="extract">
+                    <i class="fas fa-brain"></i>
+                    <span>AI提取关键词...</span>
+                </div>
+                <div class="step" data-step="autocomplete">
+                    <i class="fas fa-search"></i>
+                    <span>搜索关键词匹配...</span>
+                </div>
+                <div class="step" data-step="movies">
+                    <i class="fas fa-film"></i>
+                    <span>获取电影信息...</span>
+                </div>
+                <div class="step" data-step="complete">
+                    <i class="fas fa-check-circle"></i>
+                    <span>完成推荐...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 推荐理由区域 -->
+        <div class="explanation-section" id="explanationSection" style="display: none;">
+            <div class="explanation-title"><i class="fas fa-lightbulb"></i> 推荐理由</div>
+            <div class="explanation-text" id="explanationText"></div>
+        </div>
+
+        <div class="results"></div>
+
+        <footer>
+            <p>PeliPlat AI &copy; 2025 - AI-powered movie recommendations</p>
+        </footer>
     </div>
 
     <script>
-        const queryInput = document.getElementById('queryInput');
-        const searchBtn = document.getElementById('searchBtn');
-        const statusSection = document.getElementById('statusSection');
-        const moviesSection = document.getElementById('moviesSection');
-        const moviesGrid = document.getElementById('moviesGrid');
-        const explanationSection = document.getElementById('explanationSection');
-        const explanationText = document.getElementById('explanationText');
-        
-        let currentEventSource = null;
-        
-        // 示例标签点击事件
-        document.querySelectorAll('.example-tag').forEach(tag => {
-            tag.addEventListener('click', () => {
-                queryInput.value = tag.dataset.query;
-            });
-        });
-        
-        // 搜索按钮点击事件
-        searchBtn.addEventListener('click', () => {
-            const query = queryInput.value.trim();
-            if (!query) {
-                alert('请输入搜索内容');
-                return;
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('search-input');
+            const searchButton = document.getElementById('search-button');
+            const resultsContainer = document.querySelector('.results');
+            const loadingIndicator = document.querySelector('.loading');
+            const explanationSection = document.getElementById('explanationSection');
+            const explanationText = document.getElementById('explanationText');
+            
+            let currentEventSource = null;
+
+            // 搜索建议点击事件
+            function addSuggestionClickHandlers() {
+                document.querySelectorAll('.suggestion-tag').forEach(tag => {
+                    tag.addEventListener('click', function() {
+                        const query = this.getAttribute('data-query');
+                        searchInput.value = query;
+                        performSearch();
+                    });
+                });
             }
-            startSearch(query);
-        });
-        
-        // 回车键搜索
-        queryInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                searchBtn.click();
+
+            // 初始化
+            addSuggestionClickHandlers();
+
+            // 加载步骤动画
+            function animateLoadingSteps() {
+                const steps = document.querySelectorAll('.step');
+                steps.forEach(step => step.classList.remove('active'));
+                
+                let currentStep = 0;
+                const stepInterval = setInterval(() => {
+                    if (currentStep < steps.length) {
+                        steps[currentStep].classList.add('active');
+                        currentStep++;
+                    } else {
+                        clearInterval(stepInterval);
+                    }
+                }, 1500);
+                
+                return stepInterval;
             }
-        });
-        
-        function startSearch(query) {
-            // 关闭之前的连接
-            if (currentEventSource) {
-                currentEventSource.close();
-            }
-            
-            // 重置UI
-            searchBtn.disabled = true;
-            searchBtn.textContent = '推荐中...';
-            statusSection.innerHTML = '';
-            moviesSection.style.display = 'none';
-            explanationSection.style.display = 'none';
-            moviesGrid.innerHTML = '';
-            explanationText.innerHTML = '';
-            
-            // 创建SSE连接
-            const encodedQuery = encodeURIComponent(query);
-            currentEventSource = new EventSource(`/api/movie-tool/agent-search?query=${encodedQuery}`);
-            
-            currentEventSource.addEventListener('start', (event) => {
-                const data = JSON.parse(event.data);
-                addStatusItem('🤖 智能体分析中...', 'loading');
+
+            // 监听搜索按钮点击事件
+            searchButton.addEventListener('click', function() {
+                performSearch();
             });
-            
-            currentEventSource.addEventListener('movies_extracted', (event) => {
-                const data = JSON.parse(event.data);
-                addStatusItem(`🎯 提取到 ${data.count} 部电影，开始搜索...`, 'success');
-                console.log('提取的电影名称:', data.movieNames);
+
+            // 监听回车键
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
             });
-            
-            currentEventSource.addEventListener('movies_found', (event) => {
-                const data = JSON.parse(event.data);
-                addStatusItem(`✅ 找到 ${data.totalCount} 部电影 (${data.executionTime}ms)`, 'success');
-                displayMovies(data.movies);
-            });
-            
-            currentEventSource.addEventListener('explanation_chunk', (event) => {
-                const data = JSON.parse(event.data);
-                appendExplanation(data.text, data.isLast);
-            });
-            
-            currentEventSource.addEventListener('complete', (event) => {
-                const data = JSON.parse(event.data);
-                addStatusItem(`🎉 推荐完成，共找到 ${data.totalMovies} 部电影`, 'success');
-                searchBtn.disabled = false;
-                searchBtn.textContent = '开始推荐';
-                currentEventSource.close();
-                currentEventSource = null;
-            });
-            
-            currentEventSource.addEventListener('error', (event) => {
-                const data = JSON.parse(event.data);
-                addStatusItem(`❌ ${data.message}`, 'error');
-                searchBtn.disabled = false;
-                searchBtn.textContent = '开始推荐';
-                currentEventSource.close();
-                currentEventSource = null;
-            });
-            
-            currentEventSource.onerror = function(event) {
-                console.error('SSE连接错误:', event);
-                addStatusItem('❌ 连接中断，请重试', 'error');
-                searchBtn.disabled = false;
-                searchBtn.textContent = '开始推荐';
+
+            // 执行搜索
+            function performSearch() {
+                const query = searchInput.value.trim();
+                
+                if (query.length === 0) {
+                    alert('请输入搜索内容');
+                    return;
+                }
+                
+                // 关闭之前的连接
                 if (currentEventSource) {
                     currentEventSource.close();
-                    currentEventSource = null;
-                }
-            };
-        }
-        
-        function addStatusItem(message, type) {
-            const statusItem = document.createElement('div');
-            statusItem.className = 'status-item';
-            
-            const icon = document.createElement('div');
-            icon.className = `status-icon status-${type}`;
-            icon.textContent = type === 'loading' ? '⏳' : type === 'success' ? '✓' : '✗';
-            
-            const text = document.createElement('div');
-            text.textContent = message;
-            
-            statusItem.appendChild(icon);
-            statusItem.appendChild(text);
-            statusSection.appendChild(statusItem);
-        }
-        
-        function displayMovies(movies) {
-            if (movies.length === 0) {
-                moviesSection.style.display = 'none';
-                return;
-            }
-            
-            moviesSection.style.display = 'block';
-            moviesGrid.innerHTML = '';
-            
-            movies.forEach(movie => {
-                const movieCard = document.createElement('div');
-                movieCard.className = 'movie-card';
-                
-                const poster = document.createElement('div');
-                poster.className = 'movie-poster';
-                if (movie.photoUrl) {
-                    poster.innerHTML = `<img src="${movie.photoUrl}" alt="${movie.title}" style="width:100%;height:100%;object-fit:cover;">`;
-                } else {
-                    poster.innerHTML = '🎬';
                 }
                 
-                const info = document.createElement('div');
-                info.className = 'movie-info';
+                // 显示加载指示器
+                loadingIndicator.style.display = 'block';
+                resultsContainer.innerHTML = '';
+                explanationSection.style.display = 'none';
+                explanationText.innerHTML = '';
                 
-                const title = document.createElement('div');
-                title.className = 'movie-title';
-                title.textContent = movie.title || '未知电影';
+                // 禁用搜索按钮
+                searchButton.disabled = true;
+                searchButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 推荐中...';
                 
-                const year = document.createElement('div');
-                year.className = 'movie-year';
-                year.textContent = movie.publicationYear || '年份未知';
+                // 开始加载步骤动画
+                const stepInterval = animateLoadingSteps();
                 
-                const rating = document.createElement('div');
-                rating.className = 'movie-rating';
-                rating.textContent = movie.rating ? `⭐ ${movie.rating}` : '暂无评分';
+                // 创建SSE连接
+                const encodedQuery = encodeURIComponent(query);
+                currentEventSource = new EventSource(`/api/movie-tool/agent-search?query=${encodedQuery}`);
                 
-                info.appendChild(title);
-                info.appendChild(year);
-                info.appendChild(rating);
-                
-                movieCard.appendChild(poster);
-                movieCard.appendChild(info);
-                moviesGrid.appendChild(movieCard);
-            });
-        }
-        
-        function appendExplanation(text, isLast) {
-            if (explanationSection.style.display === 'none') {
-                explanationSection.style.display = 'block';
-            }
-            
-            explanationText.innerHTML += text;
-            
-            if (!isLast) {
-                // 添加打字机光标效果
-                const cursor = document.createElement('span');
-                cursor.className = 'typing-cursor';
-                explanationText.appendChild(cursor);
-                
-                // 移除之前的光标
-                setTimeout(() => {
-                    const cursors = explanationText.querySelectorAll('.typing-cursor');
-                    if (cursors.length > 1) {
-                        cursors[0].remove();
+                currentEventSource.addEventListener('start', (event) => {
+                    const data = JSON.parse(event.data);
+                    console.log('推荐开始:', data);
+                });
+
+                let searchMethod = 'keyword_search'; // 默认关键词搜索
+
+                currentEventSource.addEventListener('search_method', (event) => {
+                    const data = JSON.parse(event.data);
+                    console.log('搜索方式:', data);
+                    searchMethod = data.method;
+
+                    // 更新加载文本显示搜索方式
+                    const loadingText = document.getElementById('loading-text');
+                    if (loadingText) {
+                        loadingText.textContent = data.message || '正在搜索电影...';
                     }
-                }, 100);
-            } else {
-                // 移除所有光标
-                const cursors = explanationText.querySelectorAll('.typing-cursor');
-                cursors.forEach(cursor => cursor.remove());
+
+                    // 根据搜索方式激活对应步骤
+                    const steps = document.querySelectorAll('.step');
+                    if (searchMethod === 'keyword_search') {
+                        // 关键词搜索流程：已经完成了前面的步骤，激活后续步骤
+                        steps.forEach((step, idx) => {
+                            if (idx < 2) step.classList.add('active');
+                        });
+                    } else if (searchMethod === 'ai_recommendation') {
+                        // AI推荐流程：重置步骤，显示AI推荐步骤
+                        steps.forEach(step => step.classList.remove('active'));
+                    }
+                });
+                
+                currentEventSource.addEventListener('movies_extracted', (event) => {
+                    const data = JSON.parse(event.data);
+                    console.log('提取的电影名称:', data.movieNames);
+                });
+                
+                currentEventSource.addEventListener('movies_found', (event) => {
+                    const data = JSON.parse(event.data);
+                    console.log('找到电影:', data.movies);
+
+                    // 激活"获取电影信息"步骤
+                    const steps = document.querySelectorAll('.step');
+                    if (steps[2]) steps[2].classList.add('active');
+
+                    displayResults(data.movies);
+                });
+                
+                currentEventSource.addEventListener('explanation_chunk', (event) => {
+                    const data = JSON.parse(event.data);
+                    appendExplanation(data.text, data.isLast);
+                });
+                
+                currentEventSource.addEventListener('complete', (event) => {
+                    const data = JSON.parse(event.data);
+                    console.log('推荐完成');
+
+                    // 激活"完成推荐"步骤
+                    const steps = document.querySelectorAll('.step');
+                    if (steps[3]) steps[3].classList.add('active');
+
+                    clearInterval(stepInterval);
+
+                    // 延迟隐藏加载指示器，让用户看到完成状态
+                    setTimeout(() => {
+                        loadingIndicator.style.display = 'none';
+                    }, 500);
+
+                    searchButton.disabled = false;
+                    searchButton.innerHTML = '<i class="fas fa-search"></i> 开始推荐';
+
+                    if (currentEventSource) {
+                        currentEventSource.close();
+                        currentEventSource = null;
+                    }
+                });
+                
+                currentEventSource.addEventListener('error', (event) => {
+                    const data = JSON.parse(event.data);
+                    console.error('推荐错误:', data.message);
+                    clearInterval(stepInterval);
+                    loadingIndicator.style.display = 'none';
+                    searchButton.disabled = false;
+                    searchButton.innerHTML = '<i class="fas fa-search"></i> 开始推荐';
+                    
+                    resultsContainer.innerHTML = `
+                        <div class="no-results">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <h3>推荐失败</h3>
+                            <p>${data.message || '未知错误，请重试'}</p>
+                        </div>
+                    `;
+                    
+                    if (currentEventSource) {
+                        currentEventSource.close();
+                        currentEventSource = null;
+                    }
+                });
+                
+                currentEventSource.onerror = function(event) {
+                    console.error('SSE连接错误:', event);
+                    clearInterval(stepInterval);
+                    loadingIndicator.style.display = 'none';
+                    searchButton.disabled = false;
+                    searchButton.innerHTML = '<i class="fas fa-search"></i> 开始推荐';
+                    
+                    resultsContainer.innerHTML = `
+                        <div class="no-results">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <h3>连接中断</h3>
+                            <p>请检查网络连接并重试</p>
+                        </div>
+                    `;
+                    
+                    if (currentEventSource) {
+                        currentEventSource.close();
+                        currentEventSource = null;
+                    }
+                };
             }
-        }
-        
-        // 页面离开时关闭连接
-        window.addEventListener('beforeunload', () => {
-            if (currentEventSource) {
-                currentEventSource.close();
+
+            // 显示结果
+            function displayResults(movies) {
+                if (!movies || movies.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div class="no-results">
+                            <i class="fas fa-film"></i>
+                            <h3>没有找到电影</h3>
+                            <p>尝试不同的搜索关键词或查看我们的推荐。</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // 添加每个电影卡片
+                movies.forEach((movie, index) => {
+                    if (movie && typeof movie === 'object' && movie.title) {
+                        const movieElement = createMovieCard(movie, index);
+                        resultsContainer.appendChild(movieElement);
+                    }
+                });
+
+                // 为新添加的卡片添加3D效果
+                add3DCardEffects();
             }
+
+            // 创建电影卡片
+            function createMovieCard(movie, index) {
+                const card = document.createElement('div');
+                card.className = 'movie-card';
+                card.style.animationDelay = `${index * 0.1}s`;
+                
+                // Set movie click event to redirect to detail page
+                card.addEventListener('click', function() {
+                    if (movie.ppId) {
+                        // 优化title slug生成：处理特殊字符、连续横杠、首尾横杠
+                        let titleSlug = (movie.title || '')
+                            .toLowerCase()
+                            .replace(/[^\w\s-]/g, '') // 移除特殊字符
+                            .trim() // 去除首尾空格
+                            .replace(/\s+/g, '-') // 空格替换为横杠
+                            .replace(/-+/g, '-') // 多个连续横杠替换为单个
+                            .replace(/^-+|-+$/g, ''); // 去除首尾横杠
+
+                        // 如果处理后的 titleSlug 为空，使用 ppId 作为后备
+                        if (!titleSlug || titleSlug.length === 0) {
+                            titleSlug = movie.ppId || 'movie';
+                        }
+
+                        const detailUrl = `https://www.peliplat.com/en/library/movie/${movie.ppId}/${titleSlug}`;
+                        window.open(detailUrl, '_blank');
+                    }
+                });
+                
+                // 设置电影类型标签
+                const mediaType = movie.mediaType === 3 ? 'Movie' : 'TV Show';
+                
+                // 处理缺失的海报
+                const posterUrl = movie.photoUrl || 'https://via.placeholder.com/300x450?text=No+Poster';
+                
+                // 创建卡片内容
+                card.innerHTML = `
+                    <div class="movie-type">${mediaType}</div>
+                    <img src="${posterUrl}" alt="${movie.title}" class="movie-poster">
+                    <div class="movie-info">
+                        <h3 class="movie-title">${movie.title}</h3>
+                        <div class="movie-meta">
+                            <span class="year"><i class="far fa-calendar-alt"></i> ${movie.publicationYear || 'Unknown'}</span>
+                            <span class="rating"><i class="fas fa-star"></i> ${movie.rating || 'N/A'}</span>
+                        </div>
+                    </div>
+                `;
+                
+                return card;
+            }
+
+            // 添加推荐理由文本
+            function appendExplanation(text, isLast) {
+                if (explanationSection.style.display === 'none') {
+                    explanationSection.style.display = 'block';
+                }
+                
+                explanationText.innerHTML += text;
+                
+                if (!isLast) {
+                    // 添加打字机光标效果
+                    const cursor = document.createElement('span');
+                    cursor.className = 'typing-cursor';
+                    explanationText.appendChild(cursor);
+                    
+                    // 移除之前的光标
+                    setTimeout(() => {
+                        const cursors = explanationText.querySelectorAll('.typing-cursor');
+                        if (cursors.length > 1) {
+                            cursors[0].remove();
+                        }
+                    }, 100);
+                } else {
+                    // 移除所有光标
+                    const cursors = explanationText.querySelectorAll('.typing-cursor');
+                    cursors.forEach(cursor => cursor.remove());
+                }
+            }
+
+            // 3D 倾斜卡片脚本逻辑
+            function add3DCardEffects() {
+                const cards = document.querySelectorAll('.movie-card');
+
+                cards.forEach(card => {
+                    card.addEventListener('mousemove', (e) => {
+                        const rect = card.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+
+                        const centerX = rect.width / 2;
+                        const centerY = rect.height / 2;
+
+                        const rotateX = ((y - centerY) / centerY) * -10;
+                        const rotateY = ((x - centerX) / centerX) * 10;
+
+                        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+                    });
+
+                    card.addEventListener('mouseleave', () => {
+                        card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)`;
+                    });
+                });
+            }
+
+            // 页面离开时关闭连接
+            window.addEventListener('beforeunload', () => {
+                if (currentEventSource) {
+                    currentEventSource.close();
+                }
+            });
         });
     </script>
 </body>

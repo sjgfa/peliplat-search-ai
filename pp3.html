@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peliplat Reimagined - 极致电影社区</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+    <style>
+        /* --- 全局变量与重置 --- */
+        :root {
+            --bg-color: #050505;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --primary: #ff0055;
+            --secondary: #00e5ff;
+            --text-main: #ffffff;
+            --text-sec: #aaaaaa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Roboto', sans-serif;
+            overflow-x: hidden;
+            perspective: 1000px; /* 全局透视 */
+        }
+
+        h1, h2, h3 {
+            font-family: 'Montserrat', sans-serif;
+            text-transform: uppercase;
+        }
+
+        a { text-decoration: none; color: inherit; }
+
+        /* --- 背景动态光效 --- */
+        .bg-glow {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 15% 50%, rgba(255, 0, 85, 0.15), transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(0, 229, 255, 0.15), transparent 25%);
+            filter: blur(50px);
+            animation: bgPulse 10s infinite alternate;
+        }
+
+        @keyframes bgPulse {
+            0% { transform: scale(1); opacity: 0.8; }
+            100% { transform: scale(1.1); opacity: 1; }
+        }
+
+        /* --- 导航栏 --- */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 50px;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 900;
+            background: linear-gradient(45deg, var(--secondary), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 2px;
+        }
+
+        .nav-links a {
+            margin-left: 30px;
+            font-weight: 700;
+            font-size: 14px;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover { color: var(--secondary); }
+
+        /* --- Hero 区域: 3D 旋转木马 --- */
+        .hero-section {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-content {
+            position: absolute;
+            z-index: 10;
+            text-align: center;
+            pointer-events: none; /* 让点击穿透到3D场景 */
+            bottom: 15%;
+        }
+
+        .hero-title {
+            font-size: 4rem;
+            font-weight: 900;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: var(--text-sec);
+            margin-bottom: 30px;
+        }
+
+        .cta-btn {
+            pointer-events: auto;
+            padding: 12px 30px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            border-radius: 30px;
+            color: white;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+        }
+
+        .cta-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px rgba(255, 0, 85, 0.6);
+        }
+
+        /* 3D 场景核心 */
+        .scene {
+            width: 260px;
+            height: 400px;
+            position: relative;
+            perspective: 1000px;
+            transform: translateY(-50px);
+        }
+
+        .carousel {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            transform-style: preserve-3d;
+            animation: rotate 20s infinite linear;
+        }
+
+        .carousel:hover {
+            animation-play-state: paused; /* 悬停暂停 */
+        }
+
+        .carousel__cell {
+            position: absolute;
+            width: 240px;
+            height: 360px;
+            left: 10px;
+            top: 10px;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid rgba(255,255,255,0.1);
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            /* 计算位置在下方 HTML 中内联样式或JS生成，这里简化 */
+        }
+
+        .carousel__cell img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(0.7);
+            transition: filter 0.3s;
+        }
+
+        .carousel__cell:hover img {
+            filter: brightness(1.1);
+        }
+
+        /* 定义旋转位置 - 假设有6张图 */
+        .carousel__cell:nth-child(1) { transform: rotateY(0deg) translateZ(350px); }
+        .carousel__cell:nth-child(2) { transform: rotateY(60deg) translateZ(350px); }
+        .carousel__cell:nth-child(3) { transform: rotateY(120deg) translateZ(350px); }
+        .carousel__cell:nth-child(4) { transform: rotateY(180deg) translateZ(350px); }
+        .carousel__cell:nth-child(5) { transform: rotateY(240deg) translateZ(350px); }
+        .carousel__cell:nth-child(6) { transform: rotateY(300deg) translateZ(350px); }
+
+        @keyframes rotate {
+            from { transform: rotateY(0deg); }
+            to { transform: rotateY(360deg); }
+        }
+
+        /* --- 热门影评 (Grid & 3D Hover) --- */
+        .content-section {
+            padding: 80px 50px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            margin-bottom: 50px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .section-header h2 {
+            font-size: 2rem;
+            background: linear-gradient(to right, #fff, #aaa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 40px;
+        }
+
+        /* 3D 倾斜卡片 */
+        .card {
+            position: relative;
+            height: 450px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            transform-style: preserve-3d;
+            transform: perspective(1000px);
+            transition: transform 0.1s ease-out; /* JS控制时需要快速响应 */
+            cursor: pointer;
+        }
+
+        .card-content {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 20px;
+            background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+            transform: translateZ(20px); /* 内容浮起 */
+        }
+
+        .card-bg-img {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s;
+            transform: translateZ(0px);
+        }
+
+        .card:hover .card-bg-img {
+            transform: scale(1.1);
+        }
+
+        .card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            line-height: 1.2;
+        }
+
+        .card p {
+            font-size: 0.9rem;
+            color: #ccc;
+            margin-bottom: 15px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--secondary);
+            font-weight: bold;
+        }
+
+        /* 装饰性发光条 */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s;
+        }
+
+        .card:hover::before {
+            transform: scaleX(1);
+        }
+
+        /* --- Footer --- */
+        footer {
+            padding: 50px;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            margin-top: 50px;
+            color: #666;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .scene { transform: scale(0.7) translateY(-20px); }
+            .carousel__cell { width: 180px; height: 270px; }
+            .carousel__cell:nth-child(1) { transform: rotateY(0deg) translateZ(250px); }
+            .carousel__cell:nth-child(2) { transform: rotateY(60deg) translateZ(250px); }
+            .carousel__cell:nth-child(3) { transform: rotateY(120deg) translateZ(250px); }
+            .carousel__cell:nth-child(4) { transform: rotateY(180deg) translateZ(250px); }
+            .carousel__cell:nth-child(5) { transform: rotateY(240deg) translateZ(250px); }
+            .carousel__cell:nth-child(6) { transform: rotateY(300deg) translateZ(250px); }
+            .hero-title { font-size: 2.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 动态背景 -->
+    <div class="bg-glow"></div>
+
+    <!-- 导航 -->
+    <nav>
+        <div class="logo">PELIPLAT 3D</div>
+        <div class="nav-links">
+            <a href="#">首页</a>
+            <a href="#">最新影评</a>
+            <a href="#">社区讨论</a>
+            <a href="#">登录</a>
+        </div>
+    </nav>
+
+    <!-- Hero 区域 (3D 旋转) -->
+    <section class="hero-section">
+        <div class="scene">
+            <div class="carousel">
+                <!-- 这里使用占位图，实际使用时替换为电影海报 -->
+                <div class="carousel__cell"><img src="https://image.tmdb.org/t/p/w500/q6y0Go1tsGEsmtFryDOJo3dEmqu.jpg" alt="Poster 1"></div>
+                <div class="carousel__cell"><img src="https://image.tmdb.org/t/p/w500/r2J02Z2OpNTctfOSN1Ydgii51I3.jpg" alt="Poster 2"></div>
+                <div class="carousel__cell"><img src="https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg" alt="Poster 3"></div>
+                <div class="carousel__cell"><img src="https://image.tmdb.org/t/p/w500/iiZZdoQBEYBv6id8su7ImL0oCbD.jpg" alt="Poster 4"></div>
+                <div class="carousel__cell"><img src="https://image.tmdb.org/t/p/w500/db32LaOibwEliAmSL2jjDF6oDdj.jpg" alt="Poster 5"></div>
+                <div class="carousel__cell"><img src="https://image.tmdb.org/t/p/w500/t6HIqrRAclMCA60NsSmeqe9RmNV.jpg" alt="Poster 6"></div>
+            </div>
+        </div>
+
+        <div class="hero-content">
+            <h1 class="hero-title">探索电影宇宙</h1>
+            <p class="hero-subtitle">Peliplat 社区 - 连接每一位电影爱好者</p>
+            <button class="cta-btn">加入讨论</button>
+        </div>
+    </section>
+
+    <!-- 内容区域 (3D 悬停卡片) -->
+    <section class="content-section">
+        <div class="section-header">
+            <h2>热门文章</h2>
+            <div style="height: 2px; flex:1; background: linear-gradient(90deg, var(--primary), transparent);"></div>
+        </div>
+
+        <div class="grid-container">
+            <!-- 文章卡片 1 -->
+            <article class="card" id="card1">
+                <img src="https://image.tmdb.org/t/p/w500/fiVW06jE7z9YnO4trhaMEdclSiC.jpg" class="card-bg-img" alt="Article BG">
+                <div class="card-content">
+                    <div class="card-meta">
+                        <span>@CinemaLover</span>
+                        <span>5 分钟前</span>
+                    </div>
+                    <h3>速度与激情：终极对决深度解析</h3>
+                    <p>这部电影打破了所有物理定律，但我们依然热爱它。深入探讨其背后的特技拍摄手法...</p>
+                </div>
+            </article>
+
+            <!-- 文章卡片 2 -->
+            <article class="card" id="card2">
+                <img src="https://image.tmdb.org/t/p/w500/pFlaoHTZeyNkG83vxsAJiGzfSsa.jpg" class="card-bg-img" alt="Article BG">
+                <div class="card-content">
+                    <div class="card-meta">
+                        <span>@SciFiGeek</span>
+                        <span>2 小时前</span>
+                    </div>
+                    <h3>黑亚当：DC宇宙的新篇章？</h3>
+                    <p>巨石强森的加盟是否能拯救DC宇宙？我们分析了彩蛋以及未来的剧情走向。</p>
+                </div>
+            </article>
+
+            <!-- 文章卡片 3 -->
+            <article class="card" id="card3">
+                <img src="https://image.tmdb.org/t/p/w500/z2yQgX53lpxtkXLrvhmScSA90v.jpg" class="card-bg-img" alt="Article BG">
+                <div class="card-content">
+                    <div class="card-meta">
+                        <span>@HorrorFan</span>
+                        <span>昨天</span>
+                    </div>
+                    <h3>经典恐怖片的艺术美学</h3>
+                    <p>从《闪灵》到现代恐怖片，光影与声音如何制造心理恐惧...</p>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2023 Peliplat Redesign Concept. Designed for Cinematic Experience.</p>
+    </footer>
+
+    <script>
+        // --- 3D 倾斜卡片脚本逻辑 ---
+        const cards = document.querySelectorAll('.card');
+
+        cards.forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left; // 鼠标在卡片内的X坐标
+                const y = e.clientY - rect.top;  // 鼠标在卡片内的Y坐标
+                
+                // 计算中心点
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+
+                // 计算旋转角度 (限制在 +/- 15度以内)
+                const rotateX = ((y - centerY) / centerY) * -10; 
+                const rotateY = ((x - centerX) / centerX) * 10;
+
+                // 应用变换
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+            });
+
+            card.addEventListener('mouseleave', () => {
+                // 鼠标移出时复位
+                card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)`;
+            });
+        });
+    </script>
+</body>
+</html>

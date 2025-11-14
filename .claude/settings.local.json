@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp:*)",
+      "Bash(rm:*)",
+      "Bash(mvn compile:*)",
+      "Bash(export:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(mvn clean:*)",
+      "Bash(java:*)",
+      "Bash(apt:*)",
+      "Bash(apt install:*)",
+      "Bash(sudo apt:*)",
+      "Bash(sudo apt install:*)",
+      "Bash(mvn:*)",
+      "Bash(chmod:*)",
+      "Bash(./run-tests.sh)",
+      "Bash(bash:*)",
+      "Bash(echo $PATH)",
+      "Bash(grep:*)",
+      "Bash(dos2unix:*)",
+      "Bash(sed:*)",
+      "Bash(curl:*)",
+      "Bash(taskkill:*)",
+      "Bash(tskill:*)",
+      "Bash(netstat:*)",
+      "Bash(cmd /c:*)"
+    ],
+    "deny": []
+  }
+}

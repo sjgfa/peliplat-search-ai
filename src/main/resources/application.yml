@@ -24,3 +24,124 @@ spring:
           model: deepseek-chat
       embedding:
         enabled: false
+
+# AI模型配置 - 支持多模型切换
+ai:
+  active-model: doubao  # 当前激活的模型
+  models:
+    # DeepSeek 模型配置
+    deepseek:
+      provider: openai
+      api-key: ${DEEPSEEK_API_KEY:sk-e8e9ca6f29f845838cc10e5b289dd865}
+      base-url: https://api.deepseek.com
+      model: deepseek-chat
+      temperature: 0.3
+      max-tokens: 1500
+      top-p: 1.0
+      timeout: 60
+      enabled: true
+      description: "DeepSeek Chat - 高性能中文对话模型"
+    
+    # OpenAI GPT-4 配置
+    gpt4:
+      provider: openai
+      api-key: ${OPENAI_API_KEY:your-openai-api-key}
+      base-url: https://api.openai.com
+      model: gpt-4
+      temperature: 0.3
+      max-tokens: 1500
+      top-p: 1.0
+      timeout: 60
+      enabled: false
+      description: "OpenAI GPT-4 - 强大的多模态AI模型"
+    
+    # OpenAI GPT-3.5 配置
+    gpt35:
+      provider: openai
+      api-key: ${OPENAI_API_KEY:your-openai-api-key}
+      base-url: https://api.openai.com
+      model: gpt-3.5-turbo
+      temperature: 0.3
+      max-tokens: 1500
+      top-p: 1.0
+      timeout: 60
+      enabled: false
+      description: "OpenAI GPT-3.5 Turbo - 快速高效的对话模型"
+    
+    # Claude 配置
+    claude:
+      provider: anthropic
+      api-key: ${CLAUDE_API_KEY:your-claude-api-key}
+      base-url: https://api.anthropic.com
+      model: claude-3-sonnet-20240229
+      temperature: 0.3
+      max-tokens: 1500
+      top-p: 1.0
+      timeout: 60
+      enabled: false
+      description: "Anthropic Claude-3 Sonnet - 安全可靠的AI助手"
+    
+    # Ollama 本地模型配置
+    ollama:
+      provider: ollama
+      api-key: ""
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      model: ${OLLAMA_MODEL:llama2}
+      temperature: 0.3
+      max-tokens: 1500
+      top-p: 1.0
+      timeout: 120
+      enabled: false
+      description: "Ollama 本地模型 - 私有部署AI模型"
+    
+    # 通义千问配置
+    qwen:
+      provider: alibaba
+      api-key: ${QWEN_API_KEY:your-qwen-api-key}
+      base-url: https://dashscope.aliyuncs.com
+      model: qwen-turbo
+      temperature: 0.3
+      max-tokens: 1500
+      top-p: 1.0
+      timeout: 60
+      enabled: false
+      description: "阿里云通义千问 - 中文优化大模型"
+    
+    # 字节跳动豆包模型配置
+    doubao:
+      provider: bytedance
+      api-key: ${ARK_API_KEY:326eba0b-effb-4474-9afb-53aee6633ed4}
+      base-url: https://ark.cn-beijing.volces.com/api/v3
+      model: doubao-1-5-pro-32k-250115
+      temperature: 0.3
+      max-tokens: 1500
+      top-p: 1.0
+      timeout: 60
+      enabled: true
+      description: "字节跳动豆包 1.5 Pro - 高性能中文大模型"
+    
+    # 字节跳动豆包 Lite 模型配置（轻量版）
+    doubao-lite:
+      provider: bytedance
+      api-key: ${ARK_API_KEY:326eba0b-effb-4474-9afb-53aee6633ed4}
+      base-url: https://ark.cn-beijing.volces.com/api/v3
+      model: doubao-1-5-lite-32k-250115
+      temperature: 0.3
+      max-tokens: 1500
+      top-p: 1.0
+      timeout: 60
+      enabled: true
+      description: "字节跳动豆包 1.5 Lite - 快速响应中文模型"
+    
+    # 阿里云通义千问智能体 - 电影搜索专用智能体
+    movie-agent:
+      provider: dashscope
+      api-key: ${DASHSCOPE_API_KEY:sk-126e71dd47804a04980ad84d8323c7c8}
+      base-url: https://dashscope.aliyuncs.com
+      app-id: 97d0c49b9a7f421a8b9db1f03ab91dff
+      temperature: 0.3
+      max-tokens: 2000
+      timeout: 60
+      enabled: true
+      stream: true
+      description: "阿里云通义千问电影推荐智能体 - 专业电影搜索和推荐"

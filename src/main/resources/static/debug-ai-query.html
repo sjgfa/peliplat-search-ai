@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>调试AI查询分析</title>
+    <style>
+        body { font-family: 'Microsoft YaHei', Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .query-box { background: #e3f2fd; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        .result-box { background: #f3e5f5; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        .step { margin: 10px 0; padding: 10px; background: #fff3e0; border-left: 4px solid #ff9800; }
+        input { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background: #2196F3; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin: 10px 5px; }
+        button:hover { background: #1976D2; }
+        .loading { color: #ff9800; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .error { color: #f44336; }
+        .success { color: #4caf50; }
+        pre { background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto; }
+        .test-cases { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }
+        .test-case { background: #e8f5e8; padding: 10px 15px; border-radius: 20px; cursor: pointer; }
+        .test-case:hover { background: #c8e6c9; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 AI查询分析调试器</h1>
+        
+        <div class="query-box">
+            <h3>输入查询</h3>
+            <input type="text" id="queryInput" placeholder="例如：我想看黄色海绵的电影" value="我想看黄色海绵的电影">
+            <br><br>
+            <button onclick="testQuery()">🧠 测试分析</button>
+            <button onclick="clearResults()">🗑️ 清除结果</button>
+        </div>
+        
+        <div class="test-cases">
+            <div class="test-case" onclick="setQuery('我想看黄色海绵的电影')">🧽 黄色海绵</div>
+            <div class="test-case" onclick="setQuery('推荐一些蜘蛛侠电影')">🕷️ 蜘蛛侠</div>
+            <div class="test-case" onclick="setQuery('科幻电影推荐')">🚀 科幻电影</div>
+            <div class="test-case" onclick="setQuery('horror movies 2023')">👻 恐怖电影</div>
+            <div class="test-case" onclick="setQuery('浪漫爱情电影')">💕 爱情电影</div>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        function setQuery(query) {
+            document.getElementById('queryInput').value = query;
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        function testQuery() {
+            const query = document.getElementById('queryInput').value.trim();
+            if (!query) {
+                alert('请输入查询内容');
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = `
+                <div class="result-box">
+                    <h3>🔄 正在分析查询：<strong>${query}</strong></h3>
+                    <div class="loading">⏳ 连接AI工作流...</div>
+                </div>
+            `;
+            
+            const encodedQuery = encodeURIComponent(query);
+            const eventSource = new EventSource(\`/api/movie-tool/smart-search?query=\${encodedQuery}\`);
+            
+            let steps = [];
+            let analysis = {};
+            let startTime = Date.now();
+            
+            eventSource.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.type === 'step') {
+                        steps.push(\`
+                            <div class="step">
+                                <strong>${data.title}</strong> - ${data.status}
+                                <br><small>${data.description}</small>
+                            </div>
+                        \`);
+                        updateResults(query, steps, analysis, null, Date.now() - startTime);
+                        
+                    } else if (data.type === 'progress') {
+                        if (data.intent) analysis.intent = data.intent;
+                        if (data.keywords) analysis.keywords = data.keywords;
+                        if (data.searchStrategy) analysis.strategy = data.searchStrategy;
+                        
+                        steps.push(\`
+                            <div class="step">
+                                📋 进度更新：${data.message}
+                                \${data.intent ? \`<br>🎯 意图：\${data.intent}\` : ''}
+                                \${data.keywords ? \`<br>🔑 关键词：[\${data.keywords.join(', ')}]\` : ''}
+                            </div>
+                        \`);
+                        updateResults(query, steps, analysis, null, Date.now() - startTime);
+                        
+                    } else if (data.type === 'complete') {
+                        const result = data.result;
+                        const movies = result.movies || [];
+                        const metadata = result.metadata || {};
+                        
+                        steps.push(\`
+                            <div class="step success">
+                                ✅ 搜索完成！找到 <strong>${movies.length}</strong> 部电影
+                                <br>⏱️ 执行时间：${Math.round((Date.now() - startTime)/1000)} 秒
+                                \${metadata.queryAnalysis ? \`<br>🧠 AI分析：\${JSON.stringify(metadata.queryAnalysis, null, 2)}\` : ''}
+                            </div>
+                        \`);
+                        
+                        updateResults(query, steps, analysis, movies.slice(0, 5), Date.now() - startTime);
+                        eventSource.close();
+                        
+                    } else if (data.type === 'error') {
+                        steps.push(\`
+                            <div class="step error">
+                                ❌ 错误：${data.error}
+                            </div>
+                        \`);
+                        updateResults(query, steps, analysis, null, Date.now() - startTime);
+                        eventSource.close();
+                    }
+                } catch (e) {
+                    console.error('解析响应失败:', e, event.data);
+                }
+            };
+            
+            eventSource.onerror = function(event) {
+                steps.push(\`
+                    <div class="step error">
+                        ❌ 连接错误或超时
+                    </div>
+                \`);
+                updateResults(query, steps, analysis, null, Date.now() - startTime);
+                eventSource.close();
+            };
+        }
+        
+        function updateResults(query, steps, analysis, movies, elapsedTime) {
+            const resultsDiv = document.getElementById('results');
+            
+            resultsDiv.innerHTML = \`
+                <div class="result-box">
+                    <h3>🔍 查询：<strong>\${query}</strong></h3>
+                    <h4>📊 执行步骤（\${Math.round(elapsedTime/1000)}秒）：</h4>
+                    \${steps.join('')}
+                    
+                    \${Object.keys(analysis).length > 0 ? \`
+                        <h4>🧠 分析结果：</h4>
+                        <pre>\${JSON.stringify(analysis, null, 2)}</pre>
+                    \` : ''}
+                    
+                    \${movies ? \`
+                        <h4>🎬 搜索结果（前5部）：</h4>
+                        \${movies.map((movie, i) => \`
+                            <div class="step">
+                                \${i+1}. <strong>\${movie.title}</strong> (\${movie.publicationYear || 'N/A'})
+                                \${movie.genres ? \`<br>📂 类型：\${movie.genres}\` : ''}
+                                \${movie.rating ? \`<br>⭐ 评分：\${movie.rating}\` : ''}
+                            </div>
+                        \`).join('')}
+                    \` : ''}
+                </div>
+            \`;
+        }
+    </script>
+</body>
+</html>

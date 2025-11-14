@@ -8,6 +8,7 @@ import com.peliplat.ai.model.SearchResultVo;
 import com.peliplat.ai.movie.MovieTools;
 import com.peliplat.ai.service.AiModelFactory;
 import com.peliplat.ai.service.DashscopeMovieAgentService;
+import com.peliplat.ai.service.KeywordSearchService;
 import com.peliplat.ai.service.MovieSearchService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
@@ -810,6 +811,9 @@ public class MovieToolController {
     
     @Autowired
     private DashscopeMovieAgentService dashscopeMovieAgentService;
+
+    @Autowired
+    private KeywordSearchService keywordSearchService;
     
     /**
      * 智能体电影推荐 + 并发搜索 + 流式输出
@@ -825,12 +829,67 @@ public class MovieToolController {
             try {
                 logger.info("🚀 启动智能体电影推荐流程，查询: {}", query);
                 long startTime = System.currentTimeMillis();
-                
+
                 // 发送开始事件
                 emitter.send(SseEmitter.event()
                     .name("start")
                     .data(Map.of(
-                        "message", "智能体正在分析您的查询...",
+                        "message", "正在分析您的查询...",
+                        "timestamp", System.currentTimeMillis()
+                    )));
+
+                // Step 1: 尝试关键词搜索
+                logger.info("🔍 Step 1: 尝试关键词搜索");
+                List<MovieDetailVo> keywordSearchResults = keywordSearchService.searchMoviesByQuery(query, "en");
+
+                if (keywordSearchResults != null && !keywordSearchResults.isEmpty()) {
+                    // 找到了关键词匹配的电影，直接返回结果
+                    logger.info("✅ 关键词搜索成功，找到 {} 部电影，跳过AI推荐", keywordSearchResults.size());
+
+                    // 发送搜索方式通知
+                    emitter.send(SseEmitter.event()
+                        .name("search_method")
+                        .data(Map.of(
+                            "method", "keyword_search",
+                            "message", "通过关键词匹配找到相关电影",
+                            "timestamp", System.currentTimeMillis()
+                        )));
+
+                    long endTime = System.currentTimeMillis();
+
+                    // 发送搜索结果
+                    emitter.send(SseEmitter.event()
+                        .name("movies_found")
+                        .data(Map.of(
+                            "movies", keywordSearchResults,
+                            "totalCount", keywordSearchResults.size(),
+                            "executionTime", endTime - startTime,
+                            "searchMethod", "关键词匹配",
+                            "timestamp", System.currentTimeMillis()
+                        )));
+
+                    // 发送完成事件
+                    emitter.send(SseEmitter.event()
+                        .name("complete")
+                        .data(Map.of(
+                            "message", "推荐完成",
+                            "totalMovies", keywordSearchResults.size(),
+                            "executionTime", endTime - startTime,
+                            "searchMethod", "keyword_search",
+                            "timestamp", System.currentTimeMillis()
+                        )));
+
+                    emitter.complete();
+                    return;
+                }
+
+                // Step 2: 关键词搜索无结果，使用AI智能体推荐
+                logger.info("⚠️ 关键词搜索无结果，启动AI智能体推荐");
+                emitter.send(SseEmitter.event()
+                    .name("search_method")
+                    .data(Map.of(
+                        "method", "ai_recommendation",
+                        "message", "智能体正在为您推荐电影...",
                         "timestamp", System.currentTimeMillis()
                     )));
                 
@@ -839,27 +898,185 @@ public class MovieToolController {
                     .thenAccept(result -> {
                         try {
                             List<String> movieNames = result.getMovieNames();
+                            String explanation = result.getExplanation();
+                            
+                            // 立即开始流式输出智能体的解释内容，减少用户等待时间
+                            CompletableFuture<Void> explanationFuture = CompletableFuture.runAsync(() -> {
+                                try {
+                                    if (explanation != null && !explanation.trim().isEmpty()) {
+                                        // 发送解释开始事件
+                                        emitter.send(SseEmitter.event()
+                                            .name("explanation_start")
+                                            .data(Map.of(
+                                                "message", "智能体正在为您解释推荐理由...",
+                                                "timestamp", System.currentTimeMillis()
+                                            )));
+                                        
+                                        // 将解释内容分段发送（模拟打字机效果）
+                                        String[] sentences = explanation.split("。");
+                                        for (int i = 0; i < sentences.length; i++) {
+                                            if (!sentences[i].trim().isEmpty()) {
+                                                Thread.sleep(300); // 减少到300ms间隔，提高体验
+                                                emitter.send(SseEmitter.event()
+                                                    .name("explanation_chunk")
+                                                    .data(Map.of(
+                                                        "text", sentences[i] + (i < sentences.length - 1 ? "。" : ""),
+                                                        "isLast", i == sentences.length - 1,
+                                                        "timestamp", System.currentTimeMillis()
+                                                    )));
+                                            }
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    logger.warn("⚠️ 发送解释内容失败", e);
+                                }
+                            });
                             
                             if (!movieNames.isEmpty()) {
-                                // 发送提取到的电影名称
+                                String movieKeyword = movieNames.get(0); // AI只返回一个关键词
+
+                                // 发送提取到的电影关键词
                                 emitter.send(SseEmitter.event()
                                     .name("movies_extracted")
                                     .data(Map.of(
                                         "movieNames", movieNames,
-                                        "count", movieNames.size(),
-                                        "message", "开始搜索推荐的电影...",
+                                        "count", 1,
+                                        "keyword", movieKeyword,
+                                        "message", "正在搜索: " + movieKeyword,
                                         "timestamp", System.currentTimeMillis()
                                     )));
+
+                                // 使用关键词搜索，获取所有结果
+                                CompletableFuture.runAsync(() -> {
+                                    try {
+                                        logger.info("🔍 使用关键词搜索电影: {}", movieKeyword);
+                                        MovieListResponseVo searchResponse = movieSearchService.searchMoviesByQueryForVo(
+                                            movieKeyword, "zh"
+                                        );
+
+                                        if (searchResponse != null && searchResponse.getResult() != null && !searchResponse.getResult().isEmpty()) {
+                                            List<MovieDetailVo> allResults = searchResponse.getResult();
+                                            logger.info("✅ 搜索到 {} 个结果", allResults.size());
+
+                                            // 收集所有电影的标题
+                                            List<String> movieTitles = allResults.stream()
+                                                .map(MovieDetailVo::getTitle)
+                                                .filter(title -> title != null && !title.isEmpty())
+                                                .collect(Collectors.toList());
+
+                                            // 发送候选电影列表
+                                            emitter.send(SseEmitter.event()
+                                                .name("candidates_found")
+                                                .data(Map.of(
+                                                    "count", movieTitles.size(),
+                                                    "titles", movieTitles,
+                                                    "message", "找到 " + movieTitles.size() + " 个候选结果，AI正在筛选...",
+                                                    "timestamp", System.currentTimeMillis()
+                                                )));
+
+                                            // 使用AI过滤出所有匹配的电影
+                                            List<String> matchingTitles = dashscopeMovieAgentService.filterMatchingMovies(query, movieTitles);
+                                            logger.info("🎯 AI过滤保留 {} 部电影: {}", matchingTitles.size(), matchingTitles);
+
+                                            // 从搜索结果中找到所有被AI选中的电影，并按年份倒序排列
+                                            List<MovieDetailVo> foundMovies = allResults.stream()
+                                                .filter(movie -> movie.getTitle() != null && matchingTitles.contains(movie.getTitle()))
+                                                .sorted((m1, m2) -> {
+                                                    Integer year1 = m1.getPublicationYear();
+                                                    Integer year2 = m2.getPublicationYear();
+                                                    if (year1 == null && year2 == null) return 0;
+                                                    if (year1 == null) return 1;  // null排在后面
+                                                    if (year2 == null) return -1; // null排在后面
+                                                    return year2.compareTo(year1); // 倒序：新的在前
+                                                })
+                                                .collect(Collectors.toList());
+
+                                            long endTime = System.currentTimeMillis();
+
+                                            // 发送AI过滤结果
+                                            emitter.send(SseEmitter.event()
+                                                .name("ai_filtered")
+                                                .data(Map.of(
+                                                    "filteredTitles", matchingTitles,
+                                                    "count", matchingTitles.size(),
+                                                    "message", "AI过滤后保留 " + matchingTitles.size() + " 部相关电影",
+                                                    "timestamp", System.currentTimeMillis()
+                                                )));
+
+                                            // 发送搜索结果
+                                            emitter.send(SseEmitter.event()
+                                                .name("movies_found")
+                                                .data(Map.of(
+                                                    "movies", foundMovies,
+                                                    "totalCount", foundMovies.size(),
+                                                    "executionTime", endTime - startTime,
+                                                    "sortedBy", "AI智能过滤 + 年份倒序（保留 " + foundMovies.size() + " 部）",
+                                                    "timestamp", System.currentTimeMillis()
+                                                )));
+
+                                            // 发送完成事件
+                                            emitter.send(SseEmitter.event()
+                                                .name("complete")
+                                                .data(Map.of(
+                                                    "message", "搜索完成",
+                                                    "totalMovies", foundMovies.size(),
+                                                    "executionTime", endTime - startTime,
+                                                    "timestamp", System.currentTimeMillis()
+                                                )));
+
+                                            emitter.complete();
+                                        }
+
+                                    } catch (Exception e) {
+                                        logger.error("❌ 处理搜索结果失败", e);
+                                        emitter.completeWithError(e);
+                                    }
+                                });
                                 
-                                // 并发搜索提取到的电影
-                                List<CompletableFuture<MovieDetailVo>> searchFutures = movieNames.parallelStream()
+                            } else {
+                                // AI判断用户想要推荐电影，而不是搜索具体电影
+                                logger.info("🎯 AI判断：用户想要推荐电影");
+
+                                emitter.send(SseEmitter.event()
+                                    .name("recommendation_mode")
+                                    .data(Map.of(
+                                        "message", "AI正在为您推荐电影...",
+                                        "timestamp", System.currentTimeMillis()
+                                    )));
+
+                                // 调用AI推荐电影
+                                List<String> recommendedMovies = dashscopeMovieAgentService.recommendMovies(query);
+
+                                if (recommendedMovies.isEmpty()) {
+                                    emitter.send(SseEmitter.event()
+                                        .name("error")
+                                        .data(Map.of(
+                                            "message", "AI推荐失败，请重试",
+                                            "timestamp", System.currentTimeMillis()
+                                        )));
+                                    emitter.complete();
+                                    return;
+                                }
+
+                                // 发送推荐的电影列表
+                                emitter.send(SseEmitter.event()
+                                    .name("movies_recommended")
+                                    .data(Map.of(
+                                        "movieNames", recommendedMovies,
+                                        "count", recommendedMovies.size(),
+                                        "message", "AI推荐了 " + recommendedMovies.size() + " 部电影，正在搜索详情...",
+                                        "timestamp", System.currentTimeMillis()
+                                    )));
+
+                                // 搜索推荐的电影
+                                List<CompletableFuture<MovieDetailVo>> searchFutures = recommendedMovies.parallelStream()
                                     .map(movieName -> CompletableFuture.supplyAsync(() -> {
                                         try {
-                                            logger.debug("🔍 搜索电影: {}", movieName);
+                                            logger.debug("🔍 搜索推荐的电影: {}", movieName);
                                             MovieListResponseVo responseVo = movieSearchService.searchMoviesByQueryForVo(
                                                 movieName, "zh"
                                             );
-                                            
+
                                             if (responseVo != null && responseVo.getResult() != null && !responseVo.getResult().isEmpty()) {
                                                 MovieDetailVo movie = responseVo.getResult().get(0);
                                                 logger.debug("✅ 找到电影: {} ({})", movie.getTitle(), movie.getPublicationYear());
@@ -872,78 +1089,54 @@ public class MovieToolController {
                                         }
                                     }))
                                     .collect(Collectors.toList());
-                                
+
                                 // 等待所有搜索完成
-                                CompletableFuture<Void> allSearches = CompletableFuture.allOf(
-                                    searchFutures.toArray(new CompletableFuture[0])
-                                );
-                                
-                                allSearches.thenRun(() -> {
-                                    try {
-                                        List<MovieDetailVo> foundMovies = searchFutures.stream()
-                                            .map(CompletableFuture::join)
-                                            .filter(Objects::nonNull)
-                                            .collect(Collectors.toList());
-                                        
-                                        long endTime = System.currentTimeMillis();
-                                        
-                                        // 发送搜索结果
-                                        emitter.send(SseEmitter.event()
-                                            .name("movies_found")
-                                            .data(Map.of(
-                                                "movies", foundMovies,
-                                                "totalCount", foundMovies.size(),
-                                                "executionTime", endTime - startTime,
-                                                "timestamp", System.currentTimeMillis()
-                                            )));
-                                        
-                                        // 流式输出智能体的解释内容
-                                        String explanation = result.getExplanation();
-                                        if (explanation != null && !explanation.trim().isEmpty()) {
-                                            // 将解释内容分段发送（模拟打字机效果）
-                                            String[] sentences = explanation.split("。");
-                                            for (int i = 0; i < sentences.length; i++) {
-                                                if (!sentences[i].trim().isEmpty()) {
-                                                    Thread.sleep(500); // 500ms间隔
-                                                    emitter.send(SseEmitter.event()
-                                                        .name("explanation_chunk")
-                                                        .data(Map.of(
-                                                            "text", sentences[i] + (i < sentences.length - 1 ? "。" : ""),
-                                                            "isLast", i == sentences.length - 1,
-                                                            "timestamp", System.currentTimeMillis()
-                                                        )));
-                                                }
-                                            }
+                                CompletableFuture.allOf(searchFutures.toArray(new CompletableFuture[0]))
+                                    .thenRun(() -> {
+                                        try {
+                                            List<MovieDetailVo> foundMovies = searchFutures.stream()
+                                                .map(CompletableFuture::join)
+                                                .filter(Objects::nonNull)
+                                                .sorted((m1, m2) -> {
+                                                    Integer year1 = m1.getPublicationYear();
+                                                    Integer year2 = m2.getPublicationYear();
+                                                    if (year1 == null && year2 == null) return 0;
+                                                    if (year1 == null) return 1;  // null排在后面
+                                                    if (year2 == null) return -1; // null排在后面
+                                                    return year2.compareTo(year1); // 倒序：新的在前
+                                                })
+                                                .collect(Collectors.toList());
+
+                                            long endTime = System.currentTimeMillis();
+
+                                            // 发送搜索结果
+                                            emitter.send(SseEmitter.event()
+                                                .name("movies_found")
+                                                .data(Map.of(
+                                                    "movies", foundMovies,
+                                                    "totalCount", foundMovies.size(),
+                                                    "executionTime", endTime - startTime,
+                                                    "sortedBy", "AI推荐 + 年份倒序",
+                                                    "timestamp", System.currentTimeMillis()
+                                                )));
+
+                                            // 发送完成事件
+                                            emitter.send(SseEmitter.event()
+                                                .name("complete")
+                                                .data(Map.of(
+                                                    "message", "推荐完成",
+                                                    "totalMovies", foundMovies.size(),
+                                                    "executionTime", endTime - startTime,
+                                                    "timestamp", System.currentTimeMillis()
+                                                )));
+
+                                            emitter.complete();
+
+                                        } catch (Exception e) {
+                                            logger.error("❌ 发送推荐结果失败", e);
+                                            emitter.completeWithError(e);
                                         }
-                                        
-                                        // 发送完成事件
-                                        emitter.send(SseEmitter.event()
-                                            .name("complete")
-                                            .data(Map.of(
-                                                "message", "推荐完成",
-                                                "totalMovies", foundMovies.size(),
-                                                "executionTime", endTime - startTime,
-                                                "timestamp", System.currentTimeMillis()
-                                            )));
-                                        
-                                        emitter.complete();
-                                        
-                                    } catch (Exception e) {
-                                        logger.error("❌ 发送搜索结果失败", e);
-                                        emitter.completeWithError(e);
-                                    }
-                                });
-                                
-                            } else {
-                                // 没有提取到电影名称
-                                emitter.send(SseEmitter.event()
-                                    .name("error")
-                                    .data(Map.of(
-                                        "message", "智能体未能识别出具体的电影推荐",
-                                        "explanation", result.getExplanation(),
-                                        "timestamp", System.currentTimeMillis()
-                                    )));
-                                emitter.complete();
+                                    });
                             }
                             
                         } catch (Exception e) {

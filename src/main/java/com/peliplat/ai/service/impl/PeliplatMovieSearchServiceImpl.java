@@ -529,7 +529,9 @@ public class PeliplatMovieSearchServiceImpl implements MovieSearchService {
         movie.setSummary(mediaDetail.getPlot());
         movie.setInWatchlist(false);
         movie.setTotalGross(null);
-        movie.setPlotKeywords(mediaDetail.getPlotKeywords());
+        movie.setPlotKeywords(mediaDetail.getPlotKeywords() != null
+            ? new ArrayList<>(mediaDetail.getPlotKeywords())
+            : null);
         movie.setLanguageCodes(mediaDetail.getLanguages());
 
         // 复制导演和演员信息
