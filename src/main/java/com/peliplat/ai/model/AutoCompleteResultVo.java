@@ -85,5 +85,12 @@ public class AutoCompleteResultVo {
         public boolean isKeyword() {
             return docId != null && docId.contains("-keyword");
         }
+
+        /**
+         * 判断是否是media/title类型（作品名称）
+         */
+        public boolean isMedia() {
+            return docId != null && !docId.contains("-keyword");
+        }
     }
 }
