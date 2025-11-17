@@ -195,95 +195,6 @@
             animation: fadeIn 1.2s ease;
         }
 
-        .search-suggestions {
-            margin-bottom: 40px;
-            text-align: center;
-            animation: slideIn 1.8s ease;
-        }
-
-        .search-suggestions h3 {
-            font-size: 0.85rem;
-            margin-bottom: 20px;
-            color: rgba(255, 255, 255, 0.4);
-            font-weight: 400;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-        }
-
-        .suggestion-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
-            max-width: 900px;
-            margin: 0 auto;
-        }
-
-        .suggestion-tag {
-            position: relative;
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 12px 24px;
-            border-radius: 30px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            font-size: 0.95rem;
-            font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        .suggestion-tag::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg,
-                transparent,
-                rgba(255, 255, 255, 0.1),
-                transparent);
-            transition: left 0.5s;
-        }
-
-        .suggestion-tag:hover::before {
-            left: 100%;
-        }
-
-        .suggestion-tag::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: 30px;
-            padding: 1px;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .suggestion-tag:hover {
-            background: rgba(255, 255, 255, 0.08);
-            transform: translateY(-2px) scale(1.05);
-            box-shadow: 0 8px 24px rgba(255, 0, 85, 0.2),
-                        0 0 0 1px rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .suggestion-tag:hover::after {
-            opacity: 1;
-        }
-
-        .suggestion-tag:active {
-            transform: translateY(0) scale(0.98);
-        }
-
         .search-box {
             display: flex;
             align-items: center;
@@ -789,21 +700,6 @@
             <!-- Header 内容移到了上面的 hero-content -->
         </header>
 
-        <!-- 添加搜索建议标签 -->
-        <div class="search-suggestions">
-            <h3>热门推荐</h3>
-            <div class="suggestion-tags">
-                <span class="suggestion-tag" data-query="推荐一些爱国主义电影">🇨🇳 爱国主义电影</span>
-                <span class="suggestion-tag" data-query="推荐一些科幻电影">🚀 科幻电影</span>
-                <span class="suggestion-tag" data-query="推荐一些悬疑电影">🕵️ 悬疑电影</span>
-                <span class="suggestion-tag" data-query="推荐一些经典老电影">🎭 经典老电影</span>
-                <span class="suggestion-tag" data-query="推荐一些搞笑电影">😂 搞笑电影</span>
-                <span class="suggestion-tag" data-query="推荐一些浪漫爱情电影">💕 浪漫爱情</span>
-                <span class="suggestion-tag" data-query="推荐一些动作电影">💥 动作电影</span>
-                <span class="suggestion-tag" data-query="推荐一些获奖电影">🏆 获奖电影</span>
-            </div>
-        </div>
-
         <div class="search-box">
             <input type="text" id="search-input" placeholder="请输入您想要的电影类型，如：推荐一些爱国主义电影..." autofocus>
             <button id="search-button"><i class="fas fa-search"></i> 开始推荐</button>
@@ -855,20 +751,6 @@
             const explanationText = document.getElementById('explanationText');
             
             let currentEventSource = null;
-
-            // 搜索建议点击事件
-            function addSuggestionClickHandlers() {
-                document.querySelectorAll('.suggestion-tag').forEach(tag => {
-                    tag.addEventListener('click', function() {
-                        const query = this.getAttribute('data-query');
-                        searchInput.value = query;
-                        performSearch();
-                    });
-                });
-            }
-
-            // 初始化
-            addSuggestionClickHandlers();
 
             // 加载步骤动画
             function animateLoadingSteps() {
@@ -1099,10 +981,10 @@
                 // Set movie click event to redirect to detail page
                 card.addEventListener('click', function() {
                     if (movie.ppId) {
-                        // 优化title slug生成：处理特殊字符、连续横杠、首尾横杠
+                        // 优化title slug生成：保留字母、数字，处理特殊字符
                         let titleSlug = (movie.title || '')
                             .toLowerCase()
-                            .replace(/[^\w\s-]/g, '') // 移除特殊字符
+                            .replace(/[^a-z0-9\s-]/g, '') // 只保留字母、数字、空格、横杠
                             .trim() // 去除首尾空格
                             .replace(/\s+/g, '-') // 空格替换为横杠
                             .replace(/-+/g, '-') // 多个连续横杠替换为单个
@@ -1110,10 +992,12 @@
 
                         // 如果处理后的 titleSlug 为空，使用 ppId 作为后备
                         if (!titleSlug || titleSlug.length === 0) {
+                            console.warn('Title slug is empty for movie:', movie.title, 'Using ppId:', movie.ppId);
                             titleSlug = movie.ppId || 'movie';
                         }
 
                         const detailUrl = `https://www.peliplat.com/en/library/movie/${movie.ppId}/${titleSlug}`;
+                        console.log('Opening movie:', movie.title, '→', detailUrl);
                         window.open(detailUrl, '_blank');
                     }
                 });
