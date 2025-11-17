@@ -18,6 +18,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +33,40 @@ public class KeywordSearchService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final KeywordExtractionService keywordExtractionService;
+
+    /**
+     * 搜索结果（包含意图信息）
+     */
+    public static class SearchResult {
+        private List<MovieDetailVo> movies;
+        private KeywordExtractionService.SearchIntent intent;
+        private String keyword;
+        private String searchMethod;
+
+        public SearchResult(List<MovieDetailVo> movies, KeywordExtractionService.SearchIntent intent,
+                          String keyword, String searchMethod) {
+            this.movies = movies;
+            this.intent = intent;
+            this.keyword = keyword;
+            this.searchMethod = searchMethod;
+        }
+
+        public List<MovieDetailVo> getMovies() {
+            return movies;
+        }
+
+        public KeywordExtractionService.SearchIntent getIntent() {
+            return intent;
+        }
+
+        public String getKeyword() {
+            return keyword;
+        }
+
+        public String getSearchMethod() {
+            return searchMethod;
+        }
+    }
 
     private static final String AUTO_COMPLETE_URL = "https://www.peliplat.com/api/web/search/query/autoComplete/v1";
     private static final String KEYWORD_SEARCH_URL = "https://www.peliplat.com/api/web/search/query/searchByKeywordsOnly/v1";
@@ -102,6 +137,29 @@ public class KeywordSearchService {
 
         logger.info("🎬 从自动完成结果中提取到 {} 个媒体标题: {}", titles.size(), titles);
         return titles;
+    }
+
+    /**
+     * 从自动完成结果中提取关键词类型的docId和标题
+     *
+     * @param autoCompleteResult 自动完成结果
+     * @return Map，key是docId，value是title
+     */
+    public Map<String, String> extractKeywordsWithTitles(AutoCompleteResultVo autoCompleteResult) {
+        if (autoCompleteResult == null || autoCompleteResult.getResult() == null) {
+            return new java.util.HashMap<>();
+        }
+
+        Map<String, String> keywordsMap = autoCompleteResult.getResult().stream()
+                .filter(AutoCompleteResultVo.AutoCompleteItem::isKeyword)
+                .collect(Collectors.toMap(
+                    AutoCompleteResultVo.AutoCompleteItem::getDocId,
+                    AutoCompleteResultVo.AutoCompleteItem::getTitle,
+                    (existing, replacement) -> existing // 如果有重复key，保留第一个
+                ));
+
+        logger.info("📋 从自动完成结果中提取到 {} 个关键词: {}", keywordsMap.size(), keywordsMap);
+        return keywordsMap;
     }
 
     /**
@@ -263,6 +321,94 @@ public class KeywordSearchService {
         movie.setReleaseDate(mediaDetail.getReleaseDate());
 
         return movie;
+    }
+
+    /**
+     * 完整的搜索流程（包含意图信息）
+     * 返回SearchResult对象，包含电影列表、意图类型、关键词和搜索方法
+     *
+     * @param query 用户查询
+     * @param language 语言代码
+     * @return 搜索结果（包含意图信息），如果失败返回null
+     */
+    public SearchResult searchMoviesByQueryWithIntent(String query, String language) {
+        logger.info("🚀 开始AI智能搜索流程（带意图信息）: query={}, language={}", query, language);
+
+        // Step 1: 使用AI识别意图并提取关键词
+        KeywordExtractionService.IntentResult intentResult = keywordExtractionService.extractKeywordWithIntent(query);
+        if (intentResult == null) {
+            logger.info("⚠️ AI意图识别失败，跳过搜索");
+            return null;
+        }
+
+        String keyword = intentResult.getKeyword();
+        KeywordExtractionService.SearchIntent intent = intentResult.getIntent();
+
+        logger.info("🎯 AI识别意图: {} → 意图类型={}, 关键词={}", query, intent, keyword);
+
+        // Step 2: 根据意图类型选择搜索策略
+        if (intent == KeywordExtractionService.SearchIntent.TITLE) {
+            // 作品名称 → 直接使用标题搜索
+            logger.info("📺 识别为作品名称，使用标题搜索API: {}", keyword);
+            List<MovieDetailVo> movies = searchByTitles(List.of(keyword), language);
+            if (!movies.isEmpty()) {
+                logger.info("✅ 标题搜索完成，找到 {} 部电影", movies.size());
+                return new SearchResult(movies, intent, keyword, "标题搜索");
+            } else {
+                logger.info("⚠️ 标题搜索未找到结果");
+                return null;
+            }
+        } else {
+            // 类型关键词 → 使用自动完成API + AI验证 + 关键词搜索
+            logger.info("🏷️ 识别为类型关键词，使用关键词搜索流程: {}", keyword);
+
+            // 调用自动完成API
+            AutoCompleteResultVo autoCompleteResult = autoComplete(keyword, language);
+            if (autoCompleteResult == null) {
+                logger.info("⚠️ 自动完成API未返回结果");
+                return null;
+            }
+
+            // 提取关键词docId和标题
+            Map<String, String> keywordsMap = extractKeywordsWithTitles(autoCompleteResult);
+            if (keywordsMap.isEmpty()) {
+                logger.info("⚠️ 未找到关键词类型的结果");
+                return null;
+            }
+
+            // 使用AI验证并选择最匹配的关键词
+            List<String> candidateTitles = new ArrayList<>(keywordsMap.values());
+            String bestMatchTitle = keywordExtractionService.validateKeywordMatch(query, keyword, candidateTitles);
+
+            if (bestMatchTitle == null) {
+                logger.warn("⚠️ AI判断所有候选关键词都不匹配，跳过关键词搜索");
+                return null;
+            }
+
+            // 找到对应的docId
+            String selectedDocId = keywordsMap.entrySet().stream()
+                    .filter(entry -> entry.getValue().equalsIgnoreCase(bestMatchTitle))
+                    .map(Map.Entry::getKey)
+                    .findFirst()
+                    .orElse(null);
+
+            if (selectedDocId == null) {
+                logger.error("❌ 无法找到匹配标题对应的docId: {}", bestMatchTitle);
+                return null;
+            }
+
+            logger.info("🎯 AI选择的关键词: {} (docId: {})", bestMatchTitle, selectedDocId);
+
+            // 使用选中的关键词搜索
+            List<MovieDetailVo> movies = searchByKeywords(List.of(selectedDocId), language);
+            if (!movies.isEmpty()) {
+                logger.info("✅ 关键词搜索完成，找到 {} 部电影", movies.size());
+                return new SearchResult(movies, intent, keyword, "关键词搜索 (AI验证)");
+            } else {
+                logger.info("⚠️ 关键词搜索未返回结果");
+                return null;
+            }
+        }
     }
 
     /**

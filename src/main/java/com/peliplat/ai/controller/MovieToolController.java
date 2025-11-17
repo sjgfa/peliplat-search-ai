@@ -8,6 +8,7 @@ import com.peliplat.ai.model.SearchResultVo;
 import com.peliplat.ai.movie.MovieTools;
 import com.peliplat.ai.service.AiModelFactory;
 import com.peliplat.ai.service.DashscopeMovieAgentService;
+import com.peliplat.ai.service.KeywordExtractionService;
 import com.peliplat.ai.service.KeywordSearchService;
 import com.peliplat.ai.service.MovieSearchService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -814,7 +815,10 @@ public class MovieToolController {
 
     @Autowired
     private KeywordSearchService keywordSearchService;
-    
+
+    @Autowired
+    private KeywordExtractionService keywordExtractionService;
+
     /**
      * 智能体电影推荐 + 并发搜索 + 流式输出
      */
@@ -838,11 +842,43 @@ public class MovieToolController {
                         "timestamp", System.currentTimeMillis()
                     )));
 
-                // Step 1: 尝试关键词搜索
-                logger.info("🔍 Step 1: 尝试关键词搜索");
-                List<MovieDetailVo> keywordSearchResults = keywordSearchService.searchMoviesByQuery(query, "en");
+                // Step 0: AI输入验证（恶意拦截）
+                logger.info("🛡️ Step 0: AI输入验证");
+                KeywordExtractionService.ValidationResult validation = keywordExtractionService.validateUserInput(query);
+                if (!validation.isValid()) {
+                    logger.warn("🚫 输入验证失败: {}", validation.getMessage());
 
-                if (keywordSearchResults != null && !keywordSearchResults.isEmpty()) {
+                    // 发送拦截消息
+                    emitter.send(SseEmitter.event()
+                        .name("validation_failed")
+                        .data(Map.of(
+                            "message", validation.getMessage(),
+                            "timestamp", System.currentTimeMillis()
+                        )));
+
+                    // 发送完成事件
+                    emitter.send(SseEmitter.event()
+                        .name("complete")
+                        .data(Map.of(
+                            "message", "输入验证失败",
+                            "totalMovies", 0,
+                            "executionTime", System.currentTimeMillis() - startTime,
+                            "searchMethod", "validation_failed",
+                            "timestamp", System.currentTimeMillis()
+                        )));
+
+                    emitter.complete();
+                    return;
+                }
+
+                logger.info("✅ 输入验证通过");
+
+                // Step 1: 尝试关键词搜索（使用AI意图识别）
+                logger.info("🔍 Step 1: 尝试AI智能搜索");
+                KeywordSearchService.SearchResult searchResult = keywordSearchService.searchMoviesByQueryWithIntent(query, "en");
+
+                if (searchResult != null && searchResult.getMovies() != null && !searchResult.getMovies().isEmpty()) {
+                    List<MovieDetailVo> keywordSearchResults = searchResult.getMovies();
                     // 按年份倒序排列
                     keywordSearchResults = keywordSearchResults.stream()
                         .sorted((m1, m2) -> {
@@ -857,6 +893,30 @@ public class MovieToolController {
 
                     // 找到了关键词匹配的电影，直接返回结果
                     logger.info("✅ 关键词搜索成功，找到 {} 部电影（已按年份倒序），跳过AI推荐", keywordSearchResults.size());
+
+                    // 发送AI分析结果
+                    String intentType = searchResult.getIntent() == KeywordExtractionService.SearchIntent.TITLE ? "作品名称" : "类型关键词";
+                    String aiAnalysis = String.format(
+                        "📊 <strong>用户查询：</strong>\"%s\"\n\n" +
+                        "🎯 <strong>AI识别意图：</strong><span class=\"highlight\">%s</span>\n\n" +
+                        "🔍 <strong>提取关键词：</strong><span class=\"highlight\">%s</span>\n\n" +
+                        "⚙️ <strong>搜索策略：</strong>%s\n\n" +
+                        "✅ <strong>搜索结果：</strong>找到 <span class=\"highlight\">%d</span> 部相关电影，已按年份倒序排序",
+                        query, intentType, searchResult.getKeyword(),
+                        searchResult.getSearchMethod(),
+                        keywordSearchResults.size()
+                    );
+
+                    emitter.send(SseEmitter.event()
+                        .name("ai_analysis")
+                        .data(Map.of(
+                            "analysis", aiAnalysis,
+                            "intent", intentType,
+                            "keyword", searchResult.getKeyword(),
+                            "searchMethod", searchResult.getSearchMethod(),
+                            "resultCount", keywordSearchResults.size(),
+                            "timestamp", System.currentTimeMillis()
+                        )));
 
                     // 发送搜索方式通知
                     emitter.send(SseEmitter.event()

@@ -10,6 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * 关键词提取服务
  * 使用AI从用户查询中提取关键词并翻译成英文
@@ -275,6 +277,218 @@ public class KeywordExtractionService {
         } catch (ApiException | NoApiKeyException | InputRequiredException e) {
             logger.error("❌ 提取多个关键词失败: {}", userQuery, e);
             return new String[]{};
+        }
+    }
+
+    /**
+     * AI验证关键词匹配度
+     * 从候选关键词列表中选择最匹配用户查询的关键词
+     *
+     * @param userQuery 用户查询
+     * @param extractedKeyword AI提取的关键词
+     * @param candidateKeywords 候选关键词列表（来自自动完成API）
+     * @return 最匹配的关键词，如果都不匹配返回null
+     */
+    public String validateKeywordMatch(String userQuery, String extractedKeyword, List<String> candidateKeywords) {
+        if (candidateKeywords == null || candidateKeywords.isEmpty()) {
+            logger.warn("⚠️ 候选关键词列表为空");
+            return null;
+        }
+
+        if (candidateKeywords.size() == 1) {
+            logger.info("📌 只有一个候选关键词，直接返回: {}", candidateKeywords.get(0));
+            return candidateKeywords.get(0);
+        }
+
+        try {
+            logger.info("🤖 开始AI关键词匹配验证: userQuery={}, extractedKeyword={}, candidates={}",
+                       userQuery, extractedKeyword, candidateKeywords);
+
+            String candidatesStr = String.join(", ", candidateKeywords);
+
+            String prompt = String.format("""
+                Your task is to select the BEST matching keyword from the candidate list based on user's query.
+
+                User Query: "%s"
+                Extracted Keyword: "%s"
+
+                Candidate Keywords (from autocomplete API):
+                %s
+
+                RULES:
+                1. Analyze which candidate keyword BEST matches the user's intent
+                2. If NONE of the candidates match well, output: NONE
+                3. If there's a good match, output ONLY the matching keyword from the list
+                4. Do NOT output anything else, just the keyword or "NONE"
+
+                Examples:
+                Input: User Query: "科幻电影", Extracted: "science fiction", Candidates: ["Sci-Fi", "Drama", "Action"]
+                Output: Sci-Fi
+
+                Input: User Query: "搞笑电影", Extracted: "comedy", Candidates: ["Horror", "Thriller", "Mystery"]
+                Output: NONE
+
+                Input: User Query: "恐怖片", Extracted: "horror", Candidates: ["Horror", "Suspense", "Thriller"]
+                Output: Horror
+
+                Output (keyword or NONE):
+                """, userQuery, extractedKeyword, candidatesStr);
+
+            GenerationParam param = GenerationParam.builder()
+                    .apiKey(API_KEY)
+                    .model(MODEL_NAME)
+                    .prompt(prompt)
+                    .topP(0.8)
+                    .build();
+
+            Generation generation = new Generation();
+            GenerationResult result = generation.call(param);
+
+            String response = result.getOutput().getText().trim();
+            response = response.replaceAll("[\"'`\n\r]", "").trim();
+
+            logger.info("🤖 AI匹配结果: {}", response);
+
+            if ("NONE".equalsIgnoreCase(response)) {
+                logger.warn("⚠️ AI判断所有候选关键词都不匹配用户意图");
+                return null;
+            }
+
+            // 验证AI返回的关键词是否在候选列表中
+            String finalResponse = response;
+            boolean isValid = candidateKeywords.stream()
+                    .anyMatch(keyword -> keyword.equalsIgnoreCase(finalResponse));
+
+            if (isValid) {
+                logger.info("✅ AI选择了最匹配的关键词: {}", response);
+                return response;
+            } else {
+                logger.warn("⚠️ AI返回的关键词不在候选列表中: {}", response);
+                return null;
+            }
+
+        } catch (ApiException | NoApiKeyException | InputRequiredException e) {
+            logger.error("❌ AI关键词匹配验证失败", e);
+            // 失败时返回第一个候选关键词作为降级方案
+            return candidateKeywords.get(0);
+        }
+    }
+
+    /**
+     * 内容验证结果
+     */
+    public static class ValidationResult {
+        private boolean valid;
+        private String message;
+
+        public ValidationResult(boolean valid, String message) {
+            this.valid = valid;
+            this.message = message;
+        }
+
+        public boolean isValid() {
+            return valid;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+    }
+
+    /**
+     * AI验证用户输入是否合法
+     * 检测输入长度、是否为无意义内容、是否与电影相关
+     *
+     * @param userQuery 用户查询
+     * @return 验证结果（是否合法 + 提示消息）
+     */
+    public ValidationResult validateUserInput(String userQuery) {
+        // 1. 检查长度
+        if (userQuery.length() > 100) {
+            logger.warn("⚠️ 用户输入超过100字符: length={}", userQuery.length());
+            return new ValidationResult(false,
+                "🚫 兄弟，你这是写作文呢？咱这是搜电影的，不是写小说的地方！请把内容控制在100字以内，简洁明了地说你想看啥电影！");
+        }
+
+        // 2. AI检测是否为有效的电影查询
+        try {
+            logger.info("🤖 开始AI输入验证: {}", userQuery);
+
+            String prompt = String.format("""
+                Analyze if the user's input is a VALID movie/TV show search query.
+
+                User Input: "%s"
+
+                RULES:
+                1. Check if it's related to movies, TV shows, or entertainment
+                2. Detect if it's nonsense, gibberish, random characters, or completely unrelated
+                3. Output format: VALID or INVALID|reason
+
+                VALID examples:
+                - "我想看科幻电影" → VALID
+                - "推荐恐怖片" → VALID
+                - "One Piece" → VALID
+                - "action movies" → VALID
+                - "最近有什么好看的" → VALID
+
+                INVALID examples:
+                - "asdfghjkl" → INVALID|gibberish
+                - "今天天气真好" → INVALID|unrelated
+                - "1+1=2" → INVALID|unrelated
+                - "帮我做作业" → INVALID|unrelated
+                - "你好吗" → INVALID|unrelated
+                - Random numbers/symbols → INVALID|gibberish
+
+                Output (VALID or INVALID|reason):
+                """, userQuery);
+
+            GenerationParam param = GenerationParam.builder()
+                    .apiKey(API_KEY)
+                    .model(MODEL_NAME)
+                    .prompt(prompt)
+                    .topP(0.8)
+                    .build();
+
+            Generation generation = new Generation();
+            GenerationResult result = generation.call(param);
+
+            String response = result.getOutput().getText().trim();
+            response = response.replaceAll("[\"'`\n\r]", "").trim();
+
+            logger.info("🤖 AI验证结果: {}", response);
+
+            if (response.toUpperCase().startsWith("VALID")) {
+                logger.info("✅ 输入验证通过");
+                return new ValidationResult(true, "OK");
+            } else {
+                // INVALID|reason格式
+                String reason = "unknown";
+                if (response.contains("|")) {
+                    String[] parts = response.split("\\|");
+                    if (parts.length > 1) {
+                        reason = parts[1].trim();
+                    }
+                }
+
+                logger.warn("⚠️ 输入验证失败: reason={}", reason);
+
+                // 根据不同原因返回不同的"骂人"消息
+                String message;
+                if (reason.toLowerCase().contains("gibberish") || reason.toLowerCase().contains("random")) {
+                    message = "🤨 大哥，你这是键盘乱按呢？还是猫在键盘上走了一圈？要搜电影就好好说话，别乱打字！";
+                } else if (reason.toLowerCase().contains("unrelated")) {
+                    message = "🙄 老铁，这里是搜电影的，不是闲聊的地方！你要找电影就说电影，别扯这些有的没的！";
+                } else {
+                    message = "😑 这输入我实在看不懂，你确定是在找电影吗？能不能说点人话？";
+                }
+
+                return new ValidationResult(false, message);
+            }
+
+        } catch (ApiException | NoApiKeyException | InputRequiredException e) {
+            logger.error("❌ AI输入验证失败", e);
+            // 验证失败时允许通过，避免影响正常用户
+            return new ValidationResult(true, "OK");
         }
     }
 }

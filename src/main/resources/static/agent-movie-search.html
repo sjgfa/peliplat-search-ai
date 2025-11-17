@@ -195,6 +195,82 @@
             animation: fadeIn 1.2s ease;
         }
 
+        /* AI分析结果展示区域 - 默认隐藏 */
+        .ai-analysis {
+            display: none; /* 默认隐藏 */
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 15px 18px;
+            background: linear-gradient(135deg, rgba(255, 0, 85, 0.08), rgba(0, 229, 255, 0.08));
+            backdrop-filter: var(--card-blur);
+            -webkit-backdrop-filter: var(--card-blur);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 16px rgba(255, 0, 85, 0.15);
+            animation: slideDown 0.4s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-15px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .ai-analysis-icon {
+            font-size: 1.8rem;
+            color: var(--secondary-color);
+            animation: pulse 2s infinite;
+            flex-shrink: 0;
+        }
+
+        .ai-analysis-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .ai-analysis-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--secondary-color);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ai-analysis-title i {
+            font-size: 0.85rem;
+        }
+
+        .ai-analysis-text {
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .ai-analysis-text p {
+            margin: 5px 0;
+        }
+
+        .ai-analysis-text strong {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .ai-analysis-text .highlight {
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
         .search-box {
             display: flex;
             align-items: center;
@@ -700,6 +776,19 @@
             <!-- Header 内容移到了上面的 hero-content -->
         </header>
 
+        <!-- AI分析结果展示区域 -->
+        <div id="ai-analysis" class="ai-analysis" style="display: none;">
+            <div class="ai-analysis-icon">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="ai-analysis-content">
+                <div class="ai-analysis-title">
+                    <i class="fas fa-brain"></i> AI智能分析
+                </div>
+                <div id="ai-analysis-text" class="ai-analysis-text"></div>
+            </div>
+        </div>
+
         <div class="search-box">
             <input type="text" id="search-input" placeholder="请输入您想要的电影类型，如：推荐一些爱国主义电影..." autofocus>
             <button id="search-button"><i class="fas fa-search"></i> 开始推荐</button>
@@ -795,7 +884,13 @@
                 if (currentEventSource) {
                     currentEventSource.close();
                 }
-                
+
+                // 隐藏AI分析区域
+                const aiAnalysisDiv = document.getElementById('ai-analysis');
+                if (aiAnalysisDiv) {
+                    aiAnalysisDiv.style.display = 'none';
+                }
+
                 // 显示加载指示器
                 loadingIndicator.style.display = 'block';
                 resultsContainer.innerHTML = '';
@@ -843,7 +938,47 @@
                         steps.forEach(step => step.classList.remove('active'));
                     }
                 });
-                
+
+                // AI分析结果监听
+                currentEventSource.addEventListener('ai_analysis', (event) => {
+                    const data = JSON.parse(event.data);
+                    console.log('AI分析结果:', data);
+
+                    // 显示AI分析区域
+                    const aiAnalysisDiv = document.getElementById('ai-analysis');
+                    const aiAnalysisText = document.getElementById('ai-analysis-text');
+
+                    if (aiAnalysisDiv && aiAnalysisText) {
+                        // 将换行符转换为<br>标签，并保留HTML格式
+                        aiAnalysisText.innerHTML = data.analysis.replace(/\n/g, '<br>');
+                        aiAnalysisDiv.style.display = 'flex';
+                    }
+                });
+
+                // 输入验证失败监听（拦截恶意输入）
+                currentEventSource.addEventListener('validation_failed', (event) => {
+                    const data = JSON.parse(event.data);
+                    console.log('输入验证失败:', data);
+
+                    // 隐藏加载指示器
+                    loadingIndicator.style.display = 'none';
+
+                    // 显示拦截消息
+                    resultsContainer.innerHTML = `
+                        <div style="text-align: center; padding: 60px 20px;">
+                            <div style="font-size: 5rem; margin-bottom: 20px;">🚫</div>
+                            <h2 style="color: var(--primary-color); margin-bottom: 20px; font-size: 1.5rem;">输入被拦截</h2>
+                            <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.1rem; line-height: 1.8; max-width: 600px; margin: 0 auto;">
+                                ${data.message}
+                            </p>
+                        </div>
+                    `;
+
+                    // 恢复搜索按钮
+                    searchButton.disabled = false;
+                    searchButton.innerHTML = '<i class="fas fa-search"></i> 开始推荐';
+                });
+
                 currentEventSource.addEventListener('movies_extracted', (event) => {
                     const data = JSON.parse(event.data);
                     console.log('提取的电影名称:', data.movieNames);

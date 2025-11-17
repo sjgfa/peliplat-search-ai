@@ -26,7 +26,10 @@
       "Bash(taskkill:*)",
       "Bash(tskill:*)",
       "Bash(netstat:*)",
-      "Bash(cmd /c:*)"
+      "Bash(cmd /c:*)",
+      "Bash(timeout 30 bash:*)",
+      "Bash(findstr:*)",
+      "Bash(timeout:*)"
     ],
     "deny": []
   }
