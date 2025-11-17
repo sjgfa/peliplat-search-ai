@@ -879,8 +879,19 @@ public class MovieToolController {
 
                 if (searchResult != null && searchResult.getMovies() != null && !searchResult.getMovies().isEmpty()) {
                     List<MovieDetailVo> keywordSearchResults = searchResult.getMovies();
-                    // 按年份倒序排列
+                    // ppId去重 + 按年份倒序排列
+                    Set<String> seenPpIds = new HashSet<>();
                     keywordSearchResults = keywordSearchResults.stream()
+                        .filter(movie -> {
+                            // 根据ppId去重
+                            if (movie.getPpId() != null && seenPpIds.contains(movie.getPpId())) {
+                                return false;
+                            }
+                            if (movie.getPpId() != null) {
+                                seenPpIds.add(movie.getPpId());
+                            }
+                            return true;
+                        })
                         .sorted((m1, m2) -> {
                             Integer year1 = m1.getPublicationYear();
                             Integer year2 = m2.getPublicationYear();
@@ -1024,7 +1035,7 @@ public class MovieToolController {
                                     try {
                                         logger.info("🔍 使用关键词搜索电影: {}", movieKeyword);
                                         MovieListResponseVo searchResponse = movieSearchService.searchMoviesByQueryForVo(
-                                            movieKeyword, "zh"
+                                            movieKeyword, "en"
                                         );
 
                                         if (searchResponse != null && searchResponse.getResult() != null && !searchResponse.getResult().isEmpty()) {
@@ -1051,9 +1062,20 @@ public class MovieToolController {
                                             List<String> matchingTitles = dashscopeMovieAgentService.filterMatchingMovies(query, movieTitles);
                                             logger.info("🎯 AI过滤保留 {} 部电影: {}", matchingTitles.size(), matchingTitles);
 
-                                            // 从搜索结果中找到所有被AI选中的电影，并按年份倒序排列
+                                            // 从搜索结果中找到所有被AI选中的电影，ppId去重 + 按年份倒序排列
+                                            Set<String> seenPpIds = new HashSet<>();
                                             List<MovieDetailVo> foundMovies = allResults.stream()
                                                 .filter(movie -> movie.getTitle() != null && matchingTitles.contains(movie.getTitle()))
+                                                .filter(movie -> {
+                                                    // 根据ppId去重
+                                                    if (movie.getPpId() != null && seenPpIds.contains(movie.getPpId())) {
+                                                        return false;
+                                                    }
+                                                    if (movie.getPpId() != null) {
+                                                        seenPpIds.add(movie.getPpId());
+                                                    }
+                                                    return true;
+                                                })
                                                 .sorted((m1, m2) -> {
                                                     Integer year1 = m1.getPublicationYear();
                                                     Integer year2 = m2.getPublicationYear();
@@ -1147,7 +1169,7 @@ public class MovieToolController {
                                         try {
                                             logger.debug("🔍 搜索推荐的电影: {}", movieName);
                                             MovieListResponseVo responseVo = movieSearchService.searchMoviesByQueryForVo(
-                                                movieName, "zh"
+                                                movieName, "en"
                                             );
 
                                             if (responseVo != null && responseVo.getResult() != null && !responseVo.getResult().isEmpty()) {
@@ -1167,9 +1189,21 @@ public class MovieToolController {
                                 CompletableFuture.allOf(searchFutures.toArray(new CompletableFuture[0]))
                                     .thenRun(() -> {
                                         try {
+                                            // ppId去重 + 按年份倒序排列
+                                            Set<String> seenPpIds = new HashSet<>();
                                             List<MovieDetailVo> foundMovies = searchFutures.stream()
                                                 .map(CompletableFuture::join)
                                                 .filter(Objects::nonNull)
+                                                .filter(movie -> {
+                                                    // 根据ppId去重
+                                                    if (movie.getPpId() != null && seenPpIds.contains(movie.getPpId())) {
+                                                        return false;
+                                                    }
+                                                    if (movie.getPpId() != null) {
+                                                        seenPpIds.add(movie.getPpId());
+                                                    }
+                                                    return true;
+                                                })
                                                 .sorted((m1, m2) -> {
                                                     Integer year1 = m1.getPublicationYear();
                                                     Integer year2 = m2.getPublicationYear();

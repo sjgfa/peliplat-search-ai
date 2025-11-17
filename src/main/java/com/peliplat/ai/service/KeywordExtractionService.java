@@ -28,8 +28,9 @@ public class KeywordExtractionService {
      * 搜索意图类型
      */
     public enum SearchIntent {
-        TITLE,    // 搜索具体作品名称
-        GENRE     // 搜索类型/主题
+        TITLE,           // 搜索具体作品名称
+        GENRE,           // 搜索类型/主题
+        RECOMMENDATION   // 推荐相似电影
     }
 
     /**
@@ -70,23 +71,33 @@ public class KeywordExtractionService {
                 1. First, determine if user is searching for:
                    - TITLE: A specific movie/TV show/anime name (e.g., "One Piece", "Inception", "Avengers")
                    - GENRE: A movie genre/theme/type (e.g., "horror", "comedy", "action")
+                   - RECOMMENDATION: Looking for movies SIMILAR to a specific movie (e.g., "movies like Pirates of the Caribbean", "类似加勒比海盗的电影")
 
                 2. Then extract the keyword in English
 
                 3. Output format MUST be exactly: INTENT|KEYWORD
-                   - INTENT must be either "TITLE" or "GENRE"
+                   - INTENT must be either "TITLE", "GENRE", or "RECOMMENDATION"
                    - KEYWORD must be in English only
 
-                Examples:
+                Examples for TITLE (specific movie search):
                 Input: "我想看海贼王" → Output: TITLE|One Piece
                 Input: "找盗梦空间" → Output: TITLE|Inception
                 Input: "复仇者联盟" → Output: TITLE|Avengers
                 Input: "鬼灭之刃" → Output: TITLE|Demon Slayer
+
+                Examples for GENRE (genre/theme search):
                 Input: "科幻电影" → Output: GENRE|science fiction
                 Input: "搞笑电影" → Output: GENRE|comedy
                 Input: "恐怖片" → Output: GENRE|horror
                 Input: "动作片" → Output: GENRE|action
                 Input: "推荐一些悬疑电影" → Output: GENRE|mystery
+
+                Examples for RECOMMENDATION (similar movie recommendations):
+                Input: "类似加勒比海盗的电影" → Output: RECOMMENDATION|Pirates of the Caribbean
+                Input: "像盗梦空间那样的电影" → Output: RECOMMENDATION|Inception
+                Input: "和复仇者联盟类似的电影" → Output: RECOMMENDATION|Avengers
+                Input: "找一些类似哈利波特的电影" → Output: RECOMMENDATION|Harry Potter
+                Input: "movies like The Matrix" → Output: RECOMMENDATION|The Matrix
 
                 User Query: %s
 
@@ -119,6 +130,8 @@ public class KeywordExtractionService {
                     intent = SearchIntent.TITLE;
                 } else if ("GENRE".equals(intentStr)) {
                     intent = SearchIntent.GENRE;
+                } else if ("RECOMMENDATION".equals(intentStr)) {
+                    intent = SearchIntent.RECOMMENDATION;
                 } else {
                     // 默认按GENRE处理
                     logger.warn("⚠️ 无法识别意图类型: {}, 默认使用GENRE", intentStr);
@@ -295,11 +308,7 @@ public class KeywordExtractionService {
             return null;
         }
 
-        if (candidateKeywords.size() == 1) {
-            logger.info("📌 只有一个候选关键词，直接返回: {}", candidateKeywords.get(0));
-            return candidateKeywords.get(0);
-        }
-
+        // 移除"只有1个候选就直接返回"的逻辑，始终使用AI验证匹配度
         try {
             logger.info("🤖 开始AI关键词匹配验证: userQuery={}, extractedKeyword={}, candidates={}",
                        userQuery, extractedKeyword, candidateKeywords);

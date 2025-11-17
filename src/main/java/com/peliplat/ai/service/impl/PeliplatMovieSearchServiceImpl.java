@@ -41,7 +41,7 @@ public class PeliplatMovieSearchServiceImpl implements MovieSearchService {
     private static final Logger logger = LoggerFactory.getLogger(PeliplatMovieSearchServiceImpl.class);
     private static final String PELIPLAT_API_BASE_URL = "https://www.peliplat.com/api/web/search/detailSearch/v2";
     private static final String PELIPLAT_LIBRARY_API_URL = "https://www.peliplat.com/api/web/mediaList/library/listMedias";
-    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int DEFAULT_PAGE_SIZE = 10;
     private static final String POPULAR_MOVIES_FILTER_ID = "1901930552914399274";
 
     @Autowired

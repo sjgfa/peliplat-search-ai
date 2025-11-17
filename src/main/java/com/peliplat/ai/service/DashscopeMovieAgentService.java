@@ -94,7 +94,8 @@ public class DashscopeMovieAgentService {
                 Generation generation = new Generation();
                 GenerationResult result = generation.call(param);
 
-                String fullResponse = result.getOutput().getText().trim();
+                // 兼容不同模型的响应格式（qwen-plus 使用 text，qwen-max 使用 choices）
+                String fullResponse = extractResponseText(result);
                 logger.debug("📥 收到AI响应: {}", fullResponse);
 
                 // 清理响应（去除引号、换行等）
@@ -223,13 +224,19 @@ public class DashscopeMovieAgentService {
             logger.info("🎬 开始推荐电影，用户查询: {}", userQuery);
 
             String prompt = String.format("""
-                You are a professional movie recommendation expert. Based on the user's query, recommend 5-10 most relevant movies.
+                You are a professional movie recommendation expert. Based on the user's query, recommend 10-20 most relevant movies.
 
                 IMPORTANT RULES:
                 1. Output ONLY movie titles in English, one per line
                 2. Movie titles MUST be the official English titles
                 3. No numbering, no explanations, no extra text
-                4. Return 5-10 movies that best match the user's preferences
+                4. Return 10-20 movies that best match the user's preferences
+                5. **AVOID sequels/prequels**: Do NOT recommend multiple movies from the same franchise
+                   - ❌ BAD: Toy Story, Toy Story 2, Toy Story 3, Toy Story 4
+                   - ✅ GOOD: Toy Story (only recommend the FIRST or MOST ICONIC one from each series)
+                   - ❌ BAD: Paddington, Paddington 2
+                   - ✅ GOOD: Paddington (only one from the series)
+                6. Ensure DIVERSITY: Recommend movies from DIFFERENT franchises/series
 
                 Examples:
                 User Query: "搞笑电影"
@@ -239,6 +246,7 @@ public class DashscopeMovieAgentService {
                 Airplane!
                 Monty Python and the Holy Grail
                 Hot Fuzz
+                (... 5-15 more DIFFERENT movies, NO sequels)
 
                 User Query: "科幻电影"
                 Output:
@@ -247,6 +255,7 @@ public class DashscopeMovieAgentService {
                 Inception
                 Blade Runner 2049
                 Arrival
+                (... 5-15 more DIFFERENT movies, NO sequels)
 
                 User Query: %s
 
@@ -263,8 +272,9 @@ public class DashscopeMovieAgentService {
             Generation generation = new Generation();
             GenerationResult result = generation.call(param);
 
-            String fullResponse = result.getOutput().getText().trim();
-            logger.debug("📥 收到AI推荐: {}", fullResponse);
+            // 兼容不同模型的响应格式（qwen-plus 使用 text，qwen-max 使用 choices）
+            String fullResponse = extractResponseText(result);
+            logger.info("📥 收到AI推荐: {}", fullResponse);
 
             // 按行分割电影名称
             List<String> movieList = new ArrayList<>();
@@ -375,5 +385,45 @@ public class DashscopeMovieAgentService {
             // 失败时返回所有候选
             return movieTitles;
         }
+    }
+
+    /**
+     * 从 GenerationResult 中提取响应文本
+     * 兼容不同模型的响应格式：
+     * - qwen-plus: 使用 result.getOutput().getText()
+     * - qwen-max: 使用 result.getOutput().getChoices().get(0).getMessage().getContent()
+     *
+     * @param result AI生成结果
+     * @return 提取的文本内容
+     */
+    private String extractResponseText(GenerationResult result) {
+        if (result == null || result.getOutput() == null) {
+            logger.warn("⚠️ GenerationResult 或 Output 为 null");
+            return "";
+        }
+
+        // 尝试从 text 字段获取（qwen-plus）
+        String text = result.getOutput().getText();
+        if (text != null && !text.trim().isEmpty()) {
+            logger.debug("✅ 从 text 字段获取响应");
+            return text.trim();
+        }
+
+        // 尝试从 choices 获取（qwen-max）
+        try {
+            if (result.getOutput().getChoices() != null && !result.getOutput().getChoices().isEmpty()) {
+                var choice = result.getOutput().getChoices().get(0);
+                if (choice.getMessage() != null && choice.getMessage().getContent() != null) {
+                    String content = choice.getMessage().getContent();
+                    logger.debug("✅ 从 choices[0].message.content 字段获取响应");
+                    return content.trim();
+                }
+            }
+        } catch (Exception e) {
+            logger.warn("⚠️ 从 choices 获取内容失败", e);
+        }
+
+        logger.warn("⚠️ 无法从任何字段获取响应内容");
+        return "";
     }
 }

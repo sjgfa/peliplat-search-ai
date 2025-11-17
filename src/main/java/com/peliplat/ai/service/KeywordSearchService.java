@@ -358,6 +358,11 @@ public class KeywordSearchService {
                 logger.info("⚠️ 标题搜索未找到结果");
                 return null;
             }
+        } else if (intent == KeywordExtractionService.SearchIntent.RECOMMENDATION) {
+            // 推荐相似电影 → 返回null，让控制器走AI推荐流程
+            logger.info("💡 识别为推荐相似电影，需要AI推荐流程处理: {}", keyword);
+            logger.info("⚠️ 关键词搜索不适用于推荐场景，返回null让控制器使用AI智能体推荐");
+            return null;
         } else {
             // 类型关键词 → 使用自动完成API + AI验证 + 关键词搜索
             logger.info("🏷️ 识别为类型关键词，使用关键词搜索流程: {}", keyword);
@@ -449,6 +454,11 @@ public class KeywordSearchService {
                 logger.info("⚠️ 标题搜索未找到结果");
                 return null;
             }
+        } else if (intent == KeywordExtractionService.SearchIntent.RECOMMENDATION) {
+            // 推荐相似电影 → 返回null，让控制器走AI推荐流程
+            logger.info("💡 识别为推荐相似电影，需要AI推荐流程处理: {}", keyword);
+            logger.info("⚠️ 关键词搜索不适用于推荐场景，返回null让控制器使用AI智能体推荐");
+            return null;
         } else {
             // 类型关键词 → 使用自动完成API + 关键词搜索
             logger.info("🏷️ 识别为类型关键词，使用关键词搜索流程: {}", keyword);
