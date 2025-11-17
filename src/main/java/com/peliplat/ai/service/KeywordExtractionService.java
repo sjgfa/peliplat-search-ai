@@ -70,8 +70,11 @@ public class KeywordExtractionService {
                 IMPORTANT RULES:
                 1. First, determine if user is searching for:
                    - TITLE: A specific movie/TV show/anime name (e.g., "One Piece", "Inception", "Avengers")
-                   - GENRE: A movie genre/theme/type (e.g., "horror", "comedy", "action")
-                   - RECOMMENDATION: Looking for movies SIMILAR to a specific movie (e.g., "movies like Pirates of the Caribbean", "类似加勒比海盗的电影")
+                   - GENRE: A movie genre/theme/type ONLY (e.g., "horror", "comedy", "action") - NOT actors/directors
+                   - RECOMMENDATION: Any of the following:
+                     a) Movies SIMILAR to a specific movie (e.g., "movies like Pirates of the Caribbean")
+                     b) Movies by a specific ACTOR/ACTRESS (e.g., "Jackie Chan movies", "成龙的电影")
+                     c) Movies by a specific DIRECTOR (e.g., "Christopher Nolan movies", "宫崎骏的电影")
 
                 2. Then extract the keyword in English
 
@@ -85,18 +88,21 @@ public class KeywordExtractionService {
                 Input: "复仇者联盟" → Output: TITLE|Avengers
                 Input: "鬼灭之刃" → Output: TITLE|Demon Slayer
 
-                Examples for GENRE (genre/theme search):
+                Examples for GENRE (genre/theme search ONLY - pure genre, no actors/directors):
                 Input: "科幻电影" → Output: GENRE|science fiction
                 Input: "搞笑电影" → Output: GENRE|comedy
                 Input: "恐怖片" → Output: GENRE|horror
                 Input: "动作片" → Output: GENRE|action
                 Input: "推荐一些悬疑电影" → Output: GENRE|mystery
 
-                Examples for RECOMMENDATION (similar movie recommendations):
+                Examples for RECOMMENDATION (similar movies, actor/director movies):
                 Input: "类似加勒比海盗的电影" → Output: RECOMMENDATION|Pirates of the Caribbean
                 Input: "像盗梦空间那样的电影" → Output: RECOMMENDATION|Inception
-                Input: "和复仇者联盟类似的电影" → Output: RECOMMENDATION|Avengers
-                Input: "找一些类似哈利波特的电影" → Output: RECOMMENDATION|Harry Potter
+                Input: "我想看成龙的电影" → Output: RECOMMENDATION|Jackie Chan
+                Input: "成龙主演的电影" → Output: RECOMMENDATION|Jackie Chan
+                Input: "宫崎骏的电影" → Output: RECOMMENDATION|Hayao Miyazaki
+                Input: "诺兰导演的电影" → Output: RECOMMENDATION|Christopher Nolan
+                Input: "汤姆克鲁斯的电影" → Output: RECOMMENDATION|Tom Cruise
                 Input: "movies like The Matrix" → Output: RECOMMENDATION|The Matrix
 
                 User Query: %s

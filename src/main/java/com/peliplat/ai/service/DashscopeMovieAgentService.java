@@ -237,6 +237,9 @@ public class DashscopeMovieAgentService {
                    - ❌ BAD: Paddington, Paddington 2
                    - ✅ GOOD: Paddington (only one from the series)
                 6. Ensure DIVERSITY: Recommend movies from DIFFERENT franchises/series
+                7. **For actor/director queries**: Recommend their BEST and MOST ICONIC movies
+                   - Focus on critically acclaimed and representative works
+                   - Include a variety of their movie genres
 
                 Examples:
                 User Query: "搞笑电影"
@@ -256,6 +259,16 @@ public class DashscopeMovieAgentService {
                 Blade Runner 2049
                 Arrival
                 (... 5-15 more DIFFERENT movies, NO sequels)
+
+                User Query: "Jackie Chan movies"
+                Output:
+                Police Story
+                Drunken Master
+                Rumble in the Bronx
+                Rush Hour
+                Shanghai Noon
+                The Karate Kid
+                (... 4-14 more Jackie Chan movies, representing different periods)
 
                 User Query: %s
 
